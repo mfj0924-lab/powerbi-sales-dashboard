@@ -1,0 +1,971 @@
+/// 每行一条指标、对象、周期、日期、实际或目标记录。保留源行号与共享对象数量，不可默认加总比例。
+table fact_指标值
+	lineageTag: 73c4b948-2218-4ce2-bbb4-d47feb37e8c5
+
+	/// 只读取一条源业务的数值。共享部门拆出的同一源记录只取一次；多条独立业务不直接加总百分比。
+	measure 原始唯一值 =
+			VAR OneBusiness =
+			    HASONEVALUE ( 'dim_指标'[指标编号] )
+			        && HASONEVALUE ( 'fact_指标值'[周期类型] )
+			        && HASONEVALUE ( 'fact_指标值'[日期] )
+			        && HASONEVALUE ( 'fact_指标值'[目标及实际] )
+			        && DISTINCTCOUNT ( 'fact_指标值'[源记录编号] ) = 1
+			RETURN IF ( OneBusiness, SELECTEDVALUE ( 'fact_指标值'[数据] ) )
+		formatString: #,##0.00
+		isHidden
+		displayFolder: 00_计算辅助
+		lineageTag: 46232506-b152-4868-b42b-66d7a05773ab
+
+	/// 按当前指标、对象和周期取值；成交率未选择对象时默认质量部（QUA）。
+	measure 基础唯一数值 =
+			VAR Metric = SELECTEDVALUE ( 'dim_指标'[指标] )
+			VAR UseDefault = Metric = "成交率" && NOT ISCROSSFILTERED ( 'dim_考核对象' )
+			RETURN
+			    IF ( UseDefault,
+			        CALCULATE ( [原始唯一值], KEEPFILTERS ( 'dim_考核对象'[考核对象] = "质量部" ) ),
+			        [原始唯一值]
+			    )
+		formatString: #,##0.00
+		isHidden
+		displayFolder: 00_计算辅助
+		lineageTag: 1819ef3b-8b6d-4361-9970-7480cec4b57e
+
+	/// 默认2025年3月；选择单一年份后仍按3月分析，选择单一月份或季度后使用对应月份。跨年或跨月多选不生成单张卡片结果。
+	measure 分析日期 =
+			VAR DefaultDate = MAX ( '参数_分析设置'[分析月份] )
+			VAR HasDateFilter = ISCROSSFILTERED ( 'DIM_Date' )
+			VAR OneYear = HASONEVALUE ( 'DIM_Date'[年份] )
+			VAR SelectedYear = IF ( OneYear, SELECTEDVALUE ( 'DIM_Date'[年份] ), YEAR ( DefaultDate ) )
+			VAR HasMonthFilter = ISFILTERED ( 'DIM_Date'[月份] ) || ISFILTERED ( 'DIM_Date'[月份名称] )
+			    || ISFILTERED ( 'DIM_Date'[年月] ) || ISFILTERED ( 'DIM_Date'[日期] )
+			VAR HasQuarterFilter = ISFILTERED ( 'DIM_Date'[季度] ) || ISFILTERED ( 'DIM_Date'[季度序号] )
+			    || ISFILTERED ( 'DIM_Date'[年季度] )
+			VAR SelectedMonth = IF ( HasMonthFilter, SELECTEDVALUE ( 'DIM_Date'[月份] ),
+			    IF ( HasQuarterFilter, SELECTEDVALUE ( 'DIM_Date'[季度序号] ) * 3, MONTH ( DefaultDate ) ) )
+			RETURN IF ( ( NOT HasDateFilter || OneYear ) && NOT ISBLANK ( SelectedMonth ),
+			    DATE ( SelectedYear, SelectedMonth, 1 ) )
+		formatString: yyyy-MM-dd
+		displayFolder: 00_计算辅助
+		lineageTag: 431670ee-9682-4a0a-90c3-ebad3bdb79db
+
+	/// 未选择模式时为年度；年度和月度同时选择时返回空白。
+	measure 当前分析周期 = SELECTEDVALUE ( '参数_分析周期'[分析周期], IF ( NOT ISFILTERED ( '参数_分析周期'[分析周期] ), "年度" ) )
+		formatString: General
+		displayFolder: 00_计算辅助
+		lineageTag: 9731516c-7562-4de8-8eaa-7c6993b748ca
+
+	/// 年度模式取年度记录；月度模式对季度考核指标取当季记录。
+	measure 卡片周期类型 =
+			VAR Mode = [当前分析周期]
+			VAR Frequency = SELECTEDVALUE ( 'dim_指标'[考核周期] )
+			RETURN IF ( HASONEVALUE ( 'dim_指标'[指标编号] ),
+			    SWITCH ( Mode, "年度", "年度", "月度", Frequency ) )
+		formatString: General
+		isHidden
+		displayFolder: 00_计算辅助
+		lineageTag: 9407b6a5-2de5-443e-816b-85b1664d1a69
+
+	/// 把分析月份定位到对应年度、季度或月度记录的日期。
+	measure 卡片日期 =
+			VAR D = [分析日期]
+			VAR P = [卡片周期类型]
+			RETURN IF ( NOT ISBLANK ( D ), SWITCH ( P,
+			    "年度", DATE ( YEAR ( D ), 1, 1 ),
+			    "季度", DATE ( YEAR ( D ), ( QUARTER ( D ) - 1 ) * 3 + 1, 1 ),
+			    "月度", D ) )
+		formatString: yyyy-MM-dd
+		isHidden
+		displayFolder: 00_计算辅助
+		lineageTag: 3d6659ac-4eb1-4f4c-9ba8-3f6b540cd3c9
+
+	/// 按卡片模式和分析日期读取实际；不把年度、季度、月度混合相加。
+	measure 卡片实际值 =
+			VAR D = [卡片日期]
+			VAR P = [卡片周期类型]
+			RETURN IF ( NOT ISBLANK ( D ) && NOT ISBLANK ( P ),
+			    CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = D, 'fact_指标值'[周期类型] = P,
+			        'fact_指标值'[目标及实际] = "实际" ) )
+		displayFolder: 01_卡片数值
+		lineageTag: 38d7c878-b9b9-4186-aad3-2a21c3f8dbc3
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 按卡片模式和分析日期读取目标；不把年度、季度、月度混合相加。
+	measure 卡片单一目标 =
+			VAR D = [卡片日期]
+			VAR P = [卡片周期类型]
+			RETURN IF ( NOT ISBLANK ( D ) && NOT ISBLANK ( P ),
+			    CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = D, 'fact_指标值'[周期类型] = P,
+			        'fact_指标值'[目标及实际] = "目标" ) )
+		displayFolder: 01_卡片数值
+		lineageTag: 2a613a6c-7ae5-4d5b-94df-59640a7bcde2
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 按卡片模式和分析日期读取及格目标；不把年度、季度、月度混合相加。
+	measure 卡片及格目标 =
+			VAR D = [卡片日期]
+			VAR P = [卡片周期类型]
+			RETURN IF ( NOT ISBLANK ( D ) && NOT ISBLANK ( P ),
+			    CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = D, 'fact_指标值'[周期类型] = P,
+			        'fact_指标值'[目标及实际] = "及格目标" ) )
+		displayFolder: 01_卡片数值
+		lineageTag: cafdd2cf-a67b-4236-8583-2dd1657e79f1
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 按卡片模式和分析日期读取必达目标；不把年度、季度、月度混合相加。
+	measure 卡片必达目标 =
+			VAR D = [卡片日期]
+			VAR P = [卡片周期类型]
+			RETURN IF ( NOT ISBLANK ( D ) && NOT ISBLANK ( P ),
+			    CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = D, 'fact_指标值'[周期类型] = P,
+			        'fact_指标值'[目标及实际] = "必达目标" ) )
+		displayFolder: 01_卡片数值
+		lineageTag: 7f494ff6-903d-40c7-8d40-8d5b557b1831
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 按卡片模式和分析日期读取挑战目标；不把年度、季度、月度混合相加。
+	measure 卡片挑战目标 =
+			VAR D = [卡片日期]
+			VAR P = [卡片周期类型]
+			RETURN IF ( NOT ISBLANK ( D ) && NOT ISBLANK ( P ),
+			    CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = D, 'fact_指标值'[周期类型] = P,
+			        'fact_指标值'[目标及实际] = "挑战目标" ) )
+		displayFolder: 01_卡片数值
+		lineageTag: 9c2c91b0-7808-485c-a390-f9acc5cf983d
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 年度比较去年年度。月度一般比较去年同月；净利润率、成品按时销售率按需求比较去年年度。销售额年度同比另用两年同期累计。
+	measure 去年比较值 =
+			VAR D = [卡片日期]
+			VAR Metric = SELECTEDVALUE ( 'dim_指标'[指标] )
+			VAR Mode = [当前分析周期]
+			VAR PriorAnnual = Mode = "月度" && Metric IN { "净利润率", "成品按时销售率" }
+			VAR P = IF ( PriorAnnual, "年度", [卡片周期类型] )
+			VAR PreviousDate = IF ( PriorAnnual, DATE ( YEAR ( D ) - 1, 1, 1 ), EDATE ( D, -12 ) )
+			RETURN IF ( NOT ISBLANK ( D ),
+			    CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = PreviousDate, 'fact_指标值'[周期类型] = P,
+			        'fact_指标值'[目标及实际] = "实际" ) )
+		displayFolder: 02_同比计算
+		lineageTag: c94a81d2-83a8-4a6a-9493-bdcdf1b7b34b
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 只累加销售额月度实际；月份缺少或实际为空时返回空白，避免用不完整月份计算同比。
+	measure 销售额本年累计 =
+			VAR D = [分析日期]
+			VAR Y = YEAR ( D ) + ( 0 )
+			VAR StartDate = DATE ( Y, 1, 1 )
+			VAR EndDate = DATE ( Y, MONTH ( D ), 1 )
+			VAR SourceRows = CALCULATETABLE ( 'fact_指标值', REMOVEFILTERS ( 'DIM_Date' ),
+			    KEEPFILTERS ( 'dim_指标'[指标] = "商品销售额(K)" ),
+			    'fact_指标值'[周期类型] = "月度", 'fact_指标值'[目标及实际] = "实际",
+			    'fact_指标值'[日期] >= StartDate, 'fact_指标值'[日期] <= EndDate )
+			VAR Complete = COUNTROWS ( SourceRows ) = MONTH ( D )
+			    && COUNTX ( SourceRows, 'fact_指标值'[数据] ) = MONTH ( D )
+			RETURN IF ( NOT ISBLANK ( D ) && Complete, SUMX ( SourceRows, 'fact_指标值'[数据] ) )
+		formatString: #,##0.00
+		displayFolder: 02_同比计算
+		lineageTag: 3afe5ea8-1326-4527-9447-385a35e3859b
+
+	/// 只累加销售额月度实际；月份缺少或实际为空时返回空白，避免用不完整月份计算同比。
+	measure 销售额去年同期累计 =
+			VAR D = [分析日期]
+			VAR Y = YEAR ( D ) + ( -1 )
+			VAR StartDate = DATE ( Y, 1, 1 )
+			VAR EndDate = DATE ( Y, MONTH ( D ), 1 )
+			VAR SourceRows = CALCULATETABLE ( 'fact_指标值', REMOVEFILTERS ( 'DIM_Date' ),
+			    KEEPFILTERS ( 'dim_指标'[指标] = "商品销售额(K)" ),
+			    'fact_指标值'[周期类型] = "月度", 'fact_指标值'[目标及实际] = "实际",
+			    'fact_指标值'[日期] >= StartDate, 'fact_指标值'[日期] <= EndDate )
+			VAR Complete = COUNTROWS ( SourceRows ) = MONTH ( D )
+			    && COUNTX ( SourceRows, 'fact_指标值'[数据] ) = MONTH ( D )
+			RETURN IF ( NOT ISBLANK ( D ) && Complete, SUMX ( SourceRows, 'fact_指标值'[数据] ) )
+		formatString: #,##0.00
+		displayFolder: 02_同比计算
+		lineageTag: 0597b43f-e6b6-4fd7-9011-d189b25301c7
+
+	/// （本期－比较期）÷比较期；销售额年度按两年一月至分析月累计比较。比较期为零或任一数值为空时返回空白。
+	measure 同比 =
+			VAR SalesAnnual = SELECTEDVALUE ( 'dim_指标'[指标] ) = "商品销售额(K)" && [当前分析周期] = "年度"
+			VAR CurrentValue = [同比本期值]
+			VAR PreviousValue = [同比比较值]
+			RETURN IF ( NOT ISBLANK ( CurrentValue ) && NOT ISBLANK ( PreviousValue ),
+			    DIVIDE ( CurrentValue - PreviousValue, PreviousValue ) )
+		formatString: 0.00%
+		displayFolder: 02_同比计算
+		lineageTag: a52957c8-f656-4e5c-9362-167343f203eb
+
+	/// 用于检查（在模型层显示当前记录的目标配置）。带教已确认源数值有效，档位未按大小排列时只说明排列情况，不判定异常或交换源值。
+	measure 目标检查说明 =
+			VAR TargetKind = SELECTEDVALUE ( 'dim_指标'[目标类型] )
+			VAR Direction = SELECTEDVALUE ( 'dim_指标'[达标方向] )
+			VAR A = [卡片及格目标]
+			VAR B = [卡片必达目标]
+			VAR C = [卡片挑战目标]
+			VAR One = [卡片单一目标]
+			RETURN SWITCH ( TRUE (),
+			    ISBLANK ( [卡片实际值] ), "没有实际值或选择不唯一",
+			    TargetKind = "单目标" && ISBLANK ( One ), "目标缺失",
+			    TargetKind = "多目标" && ( ISBLANK ( A ) || ISBLANK ( B ) || ISBLANK ( C ) ), "目标缺失",
+			    TargetKind = "多目标" && Direction = "较高值更好" && NOT ( A <= B && B <= C ), "目标档位未按大小排列（按源值保留）",
+			    TargetKind = "多目标" && Direction = "较低值更好" && NOT ( A >= B && B >= C ), "目标档位未按大小排列（按源值保留）",
+			    ISBLANK ( TargetKind ) || ISBLANK ( Direction ), "指标选择不唯一",
+			    "正常" )
+		formatString: General
+		displayFolder: 03_颜色与提示
+		lineageTag: 87751251-00d8-4f83-bc55-917644527e9e
+
+	/// 按需求的严格大于/小于设置达标颜色，等于目标不进入更高档。缺数或选择不唯一时灰色；目标顺序异常保留提示，颜色仍按挑战、必达、及格依次判断。
+	measure 实际值颜色 =
+			VAR V = [卡片实际值]
+			VAR Direction = SELECTEDVALUE ( 'dim_指标'[达标方向] )
+			VAR Higher = Direction = "较高值更好"
+			VAR TargetKind = SELECTEDVALUE ( 'dim_指标'[目标类型] )
+			VAR A = [卡片及格目标]
+			VAR B = [卡片必达目标]
+			VAR C = [卡片挑战目标]
+			VAR T = [卡片单一目标]
+			RETURN SWITCH ( TRUE (),
+			    [目标检查说明] IN { "没有实际值或选择不唯一", "目标缺失", "指标选择不唯一" }, "#808080",
+			    TargetKind = "单目标", IF ( IF ( Higher, V > T, V < T ), "#70AD47", "#DA291C" ),
+			    IF ( Higher, V > C, V < C ), "#70AD47",
+			    IF ( Higher, V > B, V < B ), "#00B0F0",
+			    IF ( Higher, V > A, V < A ), "#FFB200",
+			    "#DA291C" )
+		formatString: General
+		displayFolder: 03_颜色与提示
+		lineageTag: 34e17193-0c19-415f-81dc-5d888c363e69
+
+	/// 服务报表（在DAX中设置同比颜色）。变化有利时为设计稿亮绿色#6ED097，不利时红色，零或空白为灰色。
+	measure 同比颜色 =
+			VAR V = [同比]
+			VAR Lower = SELECTEDVALUE ( 'dim_指标'[达标方向] ) = "较低值更好"
+			RETURN SWITCH ( TRUE (), ISBLANK ( V ) || V = 0, "#808080",
+			    IF ( Lower, V < 0, V > 0 ), "#6ED097", "#DA291C" )
+		formatString: General
+		displayFolder: 03_颜色与提示
+		lineageTag: 293dacae-453c-416c-b999-aa2f85556a83
+
+	/// 用于趋势图和矩阵；月度指标读取所选月，季度指标读取所选月对应季度，不受年度/月度按钮影响。跨多个周期合计不相加。
+	measure 明细实际值 =
+			VAR Frequency = SELECTEDVALUE ( 'dim_指标'[考核周期] )
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			VAR Q = SELECTEDVALUE ( 'DIM_Date'[季度序号] )
+			RETURN IF ( NOT ISBLANK ( Frequency ),
+			    IF ( Frequency = "季度" && NOT ISBLANK ( Y ) && NOT ISBLANK ( Q ),
+			        CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			            'fact_指标值'[日期] = DATE ( Y, ( Q - 1 ) * 3 + 1, 1 ),
+			            'fact_指标值'[周期类型] = "季度", 'fact_指标值'[目标及实际] = "实际" ),
+			        CALCULATE ( [基础唯一数值], 'fact_指标值'[周期类型] = Frequency,
+			            'fact_指标值'[目标及实际] = "实际" ) ) )
+		displayFolder: 04_明细图表
+		lineageTag: f982024b-ecdd-4c8d-9526-c18a89bd9297
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 用于趋势图和矩阵；月度指标读取所选月，季度指标读取所选月对应季度，不受年度/月度按钮影响。跨多个周期合计不相加。
+	measure 明细单一目标 =
+			VAR Frequency = SELECTEDVALUE ( 'dim_指标'[考核周期] )
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			VAR Q = SELECTEDVALUE ( 'DIM_Date'[季度序号] )
+			RETURN IF ( NOT ISBLANK ( Frequency ),
+			    IF ( Frequency = "季度" && NOT ISBLANK ( Y ) && NOT ISBLANK ( Q ),
+			        CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			            'fact_指标值'[日期] = DATE ( Y, ( Q - 1 ) * 3 + 1, 1 ),
+			            'fact_指标值'[周期类型] = "季度", 'fact_指标值'[目标及实际] = "目标" ),
+			        CALCULATE ( [基础唯一数值], 'fact_指标值'[周期类型] = Frequency,
+			            'fact_指标值'[目标及实际] = "目标" ) ) )
+		displayFolder: 04_明细图表
+		lineageTag: 6e9aa1b3-2d1c-4697-a1b0-807670b5f570
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 用于趋势图和矩阵；月度指标读取所选月，季度指标读取所选月对应季度，不受年度/月度按钮影响。跨多个周期合计不相加。
+	measure 明细及格目标 =
+			VAR Frequency = SELECTEDVALUE ( 'dim_指标'[考核周期] )
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			VAR Q = SELECTEDVALUE ( 'DIM_Date'[季度序号] )
+			RETURN IF ( NOT ISBLANK ( Frequency ),
+			    IF ( Frequency = "季度" && NOT ISBLANK ( Y ) && NOT ISBLANK ( Q ),
+			        CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			            'fact_指标值'[日期] = DATE ( Y, ( Q - 1 ) * 3 + 1, 1 ),
+			            'fact_指标值'[周期类型] = "季度", 'fact_指标值'[目标及实际] = "及格目标" ),
+			        CALCULATE ( [基础唯一数值], 'fact_指标值'[周期类型] = Frequency,
+			            'fact_指标值'[目标及实际] = "及格目标" ) ) )
+		displayFolder: 04_明细图表
+		lineageTag: 689c1278-6b07-4c14-92dd-cbcb63d7c452
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 用于趋势图和矩阵；月度指标读取所选月，季度指标读取所选月对应季度，不受年度/月度按钮影响。跨多个周期合计不相加。
+	measure 明细必达目标 =
+			VAR Frequency = SELECTEDVALUE ( 'dim_指标'[考核周期] )
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			VAR Q = SELECTEDVALUE ( 'DIM_Date'[季度序号] )
+			RETURN IF ( NOT ISBLANK ( Frequency ),
+			    IF ( Frequency = "季度" && NOT ISBLANK ( Y ) && NOT ISBLANK ( Q ),
+			        CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			            'fact_指标值'[日期] = DATE ( Y, ( Q - 1 ) * 3 + 1, 1 ),
+			            'fact_指标值'[周期类型] = "季度", 'fact_指标值'[目标及实际] = "必达目标" ),
+			        CALCULATE ( [基础唯一数值], 'fact_指标值'[周期类型] = Frequency,
+			            'fact_指标值'[目标及实际] = "必达目标" ) ) )
+		displayFolder: 04_明细图表
+		lineageTag: 39a7173f-3484-4eb6-9bbc-888ab5788d1b
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 用于趋势图和矩阵；月度指标读取所选月，季度指标读取所选月对应季度，不受年度/月度按钮影响。跨多个周期合计不相加。
+	measure 明细挑战目标 =
+			VAR Frequency = SELECTEDVALUE ( 'dim_指标'[考核周期] )
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			VAR Q = SELECTEDVALUE ( 'DIM_Date'[季度序号] )
+			RETURN IF ( NOT ISBLANK ( Frequency ),
+			    IF ( Frequency = "季度" && NOT ISBLANK ( Y ) && NOT ISBLANK ( Q ),
+			        CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			            'fact_指标值'[日期] = DATE ( Y, ( Q - 1 ) * 3 + 1, 1 ),
+			            'fact_指标值'[周期类型] = "季度", 'fact_指标值'[目标及实际] = "挑战目标" ),
+			        CALCULATE ( [基础唯一数值], 'fact_指标值'[周期类型] = Frequency,
+			            'fact_指标值'[目标及实际] = "挑战目标" ) ) )
+		displayFolder: 04_明细图表
+		lineageTag: 84fa6048-80ed-4ff1-abb6-e8babea5baa6
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 用于部门历史图表，逐个年份读取该年年度记录，保留考核对象选择。
+	measure 历史年度实际值 =
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			RETURN IF ( NOT ISBLANK ( Y ), CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			    'fact_指标值'[日期] = DATE ( Y, 1, 1 ), 'fact_指标值'[周期类型] = "年度",
+			    'fact_指标值'[目标及实际] = "实际" ) )
+		displayFolder: 05_部门历史
+		lineageTag: a367c173-e8b9-4f41-8cd9-83cac89db390
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 用于部门历史图表，逐个年份读取该年年度记录，保留考核对象选择。
+	measure 历史年度单一目标 =
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			RETURN IF ( NOT ISBLANK ( Y ), CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			    'fact_指标值'[日期] = DATE ( Y, 1, 1 ), 'fact_指标值'[周期类型] = "年度",
+			    'fact_指标值'[目标及实际] = "目标" ) )
+		displayFolder: 05_部门历史
+		lineageTag: 581039ad-3c3c-4504-bc19-412fcf157d03
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 用于部门历史图表，逐个年份读取该年年度记录，保留考核对象选择。
+	measure 历史年度及格目标 =
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			RETURN IF ( NOT ISBLANK ( Y ), CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			    'fact_指标值'[日期] = DATE ( Y, 1, 1 ), 'fact_指标值'[周期类型] = "年度",
+			    'fact_指标值'[目标及实际] = "及格目标" ) )
+		displayFolder: 05_部门历史
+		lineageTag: ca86f6e4-d620-47e0-883d-33076979b6c6
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 用于部门历史图表，逐个年份读取该年年度记录，保留考核对象选择。
+	measure 历史年度必达目标 =
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			RETURN IF ( NOT ISBLANK ( Y ), CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			    'fact_指标值'[日期] = DATE ( Y, 1, 1 ), 'fact_指标值'[周期类型] = "年度",
+			    'fact_指标值'[目标及实际] = "必达目标" ) )
+		displayFolder: 05_部门历史
+		lineageTag: 4b1d0163-4ef0-4785-b9fc-a53d24cba3a5
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 用于部门历史图表，逐个年份读取该年年度记录，保留考核对象选择。
+	measure 历史年度挑战目标 =
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			RETURN IF ( NOT ISBLANK ( Y ), CALCULATE ( [基础唯一数值], REMOVEFILTERS ( 'DIM_Date' ),
+			    'fact_指标值'[日期] = DATE ( Y, 1, 1 ), 'fact_指标值'[周期类型] = "年度",
+			    'fact_指标值'[目标及实际] = "挑战目标" ) )
+		displayFolder: 05_部门历史
+		lineageTag: ce512368-463d-403f-93ab-f09a087d0b45
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 从指定年份年度实际非空记录查找对象。计数/名单保留对象筛选；不因成交率卡片默认质量部而限制名单。
+	measure 考核对象数量 =
+			VAR Y = IF ( NOT ISBLANK ( [分析日期] ), YEAR ( [分析日期] ) )
+			VAR Objects = CALCULATETABLE ( VALUES ( 'fact_指标值'[考核对象] ), REMOVEFILTERS ( 'DIM_Date' ),
+			    'fact_指标值'[日期] = DATE ( Y, 1, 1 ), 'fact_指标值'[周期类型] = "年度",
+			    'fact_指标值'[目标及实际] = "实际", NOT ISBLANK ( 'fact_指标值'[数据] ) )
+			RETURN IF ( NOT ISBLANK ( Y ) && HASONEVALUE ( 'dim_指标'[指标编号] ), COUNTROWS ( Objects ) )
+		formatString: #,##0
+		displayFolder: 05_部门历史
+		lineageTag: b8f12508-99f1-48f2-86ed-5833863d7894
+
+	/// 从指定年份年度实际非空记录查找对象。计数/名单保留对象筛选；不因成交率卡片默认质量部而限制名单。
+	measure 历史考核对象数量 =
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			VAR Objects = CALCULATETABLE ( VALUES ( 'fact_指标值'[考核对象] ), REMOVEFILTERS ( 'DIM_Date' ),
+			    'fact_指标值'[日期] = DATE ( Y, 1, 1 ), 'fact_指标值'[周期类型] = "年度",
+			    'fact_指标值'[目标及实际] = "实际", NOT ISBLANK ( 'fact_指标值'[数据] ) )
+			RETURN IF ( NOT ISBLANK ( Y ) && HASONEVALUE ( 'dim_指标'[指标编号] ), COUNTROWS ( Objects ) )
+		formatString: #,##0
+		displayFolder: 05_部门历史
+		lineageTag: 149c4222-f7d2-4b9c-8ae5-02e58d9e12d2
+
+	/// 从指定年份年度实际非空记录查找对象。计数/名单保留对象筛选；不因成交率卡片默认质量部而限制名单。
+	measure 考核对象名单 =
+			VAR Y = IF ( NOT ISBLANK ( [分析日期] ), YEAR ( [分析日期] ) )
+			VAR Objects = CALCULATETABLE ( VALUES ( 'fact_指标值'[考核对象] ), REMOVEFILTERS ( 'DIM_Date' ),
+			    'fact_指标值'[日期] = DATE ( Y, 1, 1 ), 'fact_指标值'[周期类型] = "年度",
+			    'fact_指标值'[目标及实际] = "实际", NOT ISBLANK ( 'fact_指标值'[数据] ) )
+			RETURN IF ( NOT ISBLANK ( Y ) && HASONEVALUE ( 'dim_指标'[指标编号] ), CONCATENATEX ( Objects, 'fact_指标值'[考核对象], "、", 'fact_指标值'[考核对象], ASC ) )
+		formatString: General
+		displayFolder: 05_部门历史
+		lineageTag: b15a4b04-7168-4f70-959f-492feedcc507
+
+	/// 从指定年份年度实际非空记录查找对象。计数/名单保留对象筛选；不因成交率卡片默认质量部而限制名单。
+	measure 历史考核对象名单 =
+			VAR Y = SELECTEDVALUE ( 'DIM_Date'[年份] )
+			VAR Objects = CALCULATETABLE ( VALUES ( 'fact_指标值'[考核对象] ), REMOVEFILTERS ( 'DIM_Date' ),
+			    'fact_指标值'[日期] = DATE ( Y, 1, 1 ), 'fact_指标值'[周期类型] = "年度",
+			    'fact_指标值'[目标及实际] = "实际", NOT ISBLANK ( 'fact_指标值'[数据] ) )
+			RETURN IF ( NOT ISBLANK ( Y ) && HASONEVALUE ( 'dim_指标'[指标编号] ), CONCATENATEX ( Objects, 'fact_指标值'[考核对象], "、", 'fact_指标值'[考核对象], ASC ) )
+		formatString: General
+		displayFolder: 05_部门历史
+		lineageTag: e983b2dd-7527-4876-bf48-7c0c3bfd428f
+
+	/// 显示实际考核对象的中文名称；成交率未选对象时显示质量部。
+	measure 显示考核对象 =
+			VAR _metric = SELECTEDVALUE ( 'dim_指标'[指标] )
+			VAR _object = SELECTEDVALUE ( 'dim_考核对象'[考核对象] )
+			RETURN IF ( _metric = "成交率" && NOT ISCROSSFILTERED ( 'dim_考核对象' ), "质量部",
+			    IF ( NOT ISBLANK ( _object ), _object, [考核对象名单] ) )
+		formatString: General
+		displayFolder: 03_颜色与提示
+		lineageTag: b7169c55-c27e-4113-bf14-33d7eaad83db
+
+	/// 显示实际读取的年度、季度或月份。
+	measure 当前期间说明 =
+			VAR D = [分析日期]
+			VAR P = [卡片周期类型]
+			RETURN IF ( NOT ISBLANK ( D ), SWITCH ( P,
+			    "年度", FORMAT ( D, "yyyy年" ),
+			    "季度", FORMAT ( D, "yyyy年" ) & "Q" & QUARTER ( D ),
+			    "月度", FORMAT ( D, "yyyy年m月" ) ) )
+		formatString: General
+		displayFolder: 03_颜色与提示
+		lineageTag: 910b44cc-eaf5-4260-be03-00a558c524ef
+
+	/// 直接显示同比采用的比较方式，避免把例外指标误认为去年同月。
+	measure 当前比较说明 =
+			VAR M = SELECTEDVALUE ( 'dim_指标'[指标] )
+			VAR Mode = [当前分析周期]
+			RETURN SWITCH ( TRUE (),
+			    M = "商品销售额(K)" && Mode = "年度", "同比比较两年一月至分析月的月度累计",
+			    Mode = "月度" && M IN { "净利润率", "成品按时销售率" }, "按需求与去年年度实际比较",
+			    Mode = "年度", "与去年年度实际比较",
+			    Mode = "月度", "与去年相同月份或季度比较" )
+		formatString: General
+		displayFolder: 03_颜色与提示
+		lineageTag: 1518a00e-0a3f-4af0-a488-c6443a890e82
+
+	/// 直接显示同比公式的本期数值；销售额年度显示一月至分析月累计，其余显示当前实际。
+	measure 同比本期值 =
+			VAR SalesAnnual = SELECTEDVALUE ( 'dim_指标'[指标] ) = "商品销售额(K)" && [当前分析周期] = "年度"
+			RETURN IF ( SalesAnnual, [销售额本年累计], [卡片实际值] )
+		displayFolder: 02_同比计算
+		lineageTag: 3a751dcc-12bf-403d-93ef-20594a1018ca
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 直接显示同比公式的比较数值，供用户在检查页核对比较方式。
+	measure 同比比较值 =
+			VAR SalesAnnual = SELECTEDVALUE ( 'dim_指标'[指标] ) = "商品销售额(K)" && [当前分析周期] = "年度"
+			RETURN IF ( SalesAnnual, [销售额去年同期累计], [去年比较值] )
+		displayFolder: 02_同比计算
+		lineageTag: 6e8356e9-9752-4a0e-95e0-905808c132a5
+
+		formatStringDefinition = SWITCH ( SELECTEDVALUE ( 'dim_指标'[数值类型] ), "百分比", "0.00%", "整数", "#,##0", "#,##0.00" )
+
+	/// 按列名选择当前分析年份的月度、季度或年度源值；只有一条独立源记录时返回数值。
+	measure 报表明细实际值 =
+			VAR _year = YEAR ( MAX ( '参数_分析设置'[分析月份] ) )
+			VAR _period = SELECTEDVALUE ( '参数_明细列'[周期类型] )
+			VAR _number = SELECTEDVALUE ( '参数_明细列'[序号] )
+			VAR _month = SWITCH ( _period, "月度", _number, "季度", (_number - 1) * 3 + 1, "年度", 1 )
+			RETURN IF ( NOT ISBLANK ( _period ),
+			    CALCULATE ( [原始唯一值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = DATE ( _year, _month, 1 ),
+			        'fact_指标值'[周期类型] = _period,
+			        'fact_指标值'[目标及实际] = "实际" ) )
+		displayFolder: 05_正式报表
+		lineageTag: d0db2b19-a459-42f1-9995-af63cfcb611b
+
+		formatStringDefinition = IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" )
+
+	/// 按列名选择当前分析年份的月度、季度或年度源值；只有一条独立源记录时返回数值。
+	measure 报表明细单一目标 =
+			VAR _year = YEAR ( MAX ( '参数_分析设置'[分析月份] ) )
+			VAR _period = SELECTEDVALUE ( '参数_明细列'[周期类型] )
+			VAR _number = SELECTEDVALUE ( '参数_明细列'[序号] )
+			VAR _month = SWITCH ( _period, "月度", _number, "季度", (_number - 1) * 3 + 1, "年度", 1 )
+			RETURN IF ( NOT ISBLANK ( _period ),
+			    CALCULATE ( [原始唯一值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = DATE ( _year, _month, 1 ),
+			        'fact_指标值'[周期类型] = _period,
+			        'fact_指标值'[目标及实际] = "目标" ) )
+		displayFolder: 05_正式报表
+		lineageTag: 878f590d-1e85-4410-be51-8fd68dd254e0
+
+		formatStringDefinition = IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" )
+
+	/// 按列名选择当前分析年份的月度、季度或年度源值；只有一条独立源记录时返回数值。
+	measure 报表明细及格目标 =
+			VAR _year = YEAR ( MAX ( '参数_分析设置'[分析月份] ) )
+			VAR _period = SELECTEDVALUE ( '参数_明细列'[周期类型] )
+			VAR _number = SELECTEDVALUE ( '参数_明细列'[序号] )
+			VAR _month = SWITCH ( _period, "月度", _number, "季度", (_number - 1) * 3 + 1, "年度", 1 )
+			RETURN IF ( NOT ISBLANK ( _period ),
+			    CALCULATE ( [原始唯一值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = DATE ( _year, _month, 1 ),
+			        'fact_指标值'[周期类型] = _period,
+			        'fact_指标值'[目标及实际] = "及格目标" ) )
+		displayFolder: 05_正式报表
+		lineageTag: 6bf63868-b7c9-4efc-9eda-c8f49e67bfc4
+
+		formatStringDefinition = IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" )
+
+	/// 按列名选择当前分析年份的月度、季度或年度源值；只有一条独立源记录时返回数值。
+	measure 报表明细必达目标 =
+			VAR _year = YEAR ( MAX ( '参数_分析设置'[分析月份] ) )
+			VAR _period = SELECTEDVALUE ( '参数_明细列'[周期类型] )
+			VAR _number = SELECTEDVALUE ( '参数_明细列'[序号] )
+			VAR _month = SWITCH ( _period, "月度", _number, "季度", (_number - 1) * 3 + 1, "年度", 1 )
+			RETURN IF ( NOT ISBLANK ( _period ),
+			    CALCULATE ( [原始唯一值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = DATE ( _year, _month, 1 ),
+			        'fact_指标值'[周期类型] = _period,
+			        'fact_指标值'[目标及实际] = "必达目标" ) )
+		displayFolder: 05_正式报表
+		lineageTag: c32763c9-b4e6-4384-8f9d-7a4bab85299b
+
+		formatStringDefinition = IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" )
+
+	/// 按列名选择当前分析年份的月度、季度或年度源值；只有一条独立源记录时返回数值。
+	measure 报表明细挑战目标 =
+			VAR _year = YEAR ( MAX ( '参数_分析设置'[分析月份] ) )
+			VAR _period = SELECTEDVALUE ( '参数_明细列'[周期类型] )
+			VAR _number = SELECTEDVALUE ( '参数_明细列'[序号] )
+			VAR _month = SWITCH ( _period, "月度", _number, "季度", (_number - 1) * 3 + 1, "年度", 1 )
+			RETURN IF ( NOT ISBLANK ( _period ),
+			    CALCULATE ( [原始唯一值], REMOVEFILTERS ( 'DIM_Date' ),
+			        'fact_指标值'[日期] = DATE ( _year, _month, 1 ),
+			        'fact_指标值'[周期类型] = _period,
+			        'fact_指标值'[目标及实际] = "挑战目标" ) )
+		displayFolder: 05_正式报表
+		lineageTag: f0f7f968-cf54-4597-82df-e4c9b80d475b
+
+		formatStringDefinition = IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" )
+
+	/// 矩阵的行决定实际或目标，列决定月份、季度或年度 Total。
+	measure 矩阵数值 =
+			SWITCH ( SELECTEDVALUE ( '参数_明细行'[行项目] ),
+			    "实际", [报表明细实际值], "目标", [报表明细单一目标],
+			    "及格目标", [报表明细及格目标], "必达目标", [报表明细必达目标], "挑战目标", [报表明细挑战目标] )
+		displayFolder: 05_正式报表
+		lineageTag: 947713e5-733c-4ec0-910e-4163fecb2db3
+
+		formatStringDefinition = IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" )
+
+	/// 矩阵空实际显示横线，保留百分比和整数格式；数值计算仍用矩阵数值。
+	measure 矩阵显示数值 =
+			VAR _v = [矩阵数值]
+			RETURN IF ( ISBLANK ( _v ), "—", FORMAT ( _v, IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" ) ) )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 006c3363-4871-422e-9b30-7febb88fd9aa
+
+	/// 趋势和矩阵逐列比较目标，严格大于或小于；等于目标不进入更高档。
+	measure 报表明细颜色 =
+			VAR _v = [报表明细实际值]
+			VAR _higher = SELECTEDVALUE ( 'dim_指标'[达标方向] ) = "较高值更好"
+			VAR _single = SELECTEDVALUE ( 'dim_指标'[目标类型] ) = "单目标"
+			VAR _a = [报表明细及格目标]
+			VAR _b = [报表明细必达目标]
+			VAR _c = [报表明细挑战目标]
+			VAR _t = [报表明细单一目标]
+			RETURN SWITCH ( TRUE (), ISBLANK ( _v ), "#F7F6F5",
+			    _single && ISBLANK ( _t ), "#808080",
+			    _single, IF ( IF ( _higher, _v > _t, _v < _t ), "#70AD47", "#DA291C" ),
+			    ISBLANK ( _a ) || ISBLANK ( _b ) || ISBLANK ( _c ), "#808080",
+			    IF ( _higher, _v > _c, _v < _c ), "#70AD47",
+			    IF ( _higher, _v > _b, _v < _b ), "#00B0F0",
+			    IF ( _higher, _v > _a, _v < _a ), "#FFB200", "#DA291C" )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 5ea91204-a924-40ce-b3e1-34d69ef6e0d4
+
+	/// 只给实际行着达标颜色，目标行保持浅灰。
+	measure 矩阵背景颜色 = IF ( SELECTEDVALUE ( '参数_明细行'[行项目] ) = "实际", [报表明细颜色], "#F7F6F5" )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 89f66980-609d-4449-adc8-7b496a82f483
+
+	/// 有实际值的彩色单元格使用白字，其余使用深色文字。
+	measure 矩阵文字颜色 = IF ( SELECTEDVALUE ( '参数_明细行'[行项目] ) = "实际" && NOT ISBLANK ( [矩阵数值] ), "#FFFFFF", "#151936" )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 8045a6b1-a21b-4e58-9282-285556c6e053
+
+	/// 显示同比方向和百分比；颜色继续读取已核对的同比颜色。
+	measure 报表同比文字 =
+			VAR _v = [同比]
+			RETURN IF ( ISBLANK ( _v ), "同比 —", "同比 " & IF ( _v >= 0, "↗ +", "↘ " ) & FORMAT ( _v, "0.00%" ) )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 13570319-8aa5-4528-b386-e8170b7f31ba
+
+	/// 服务报表（在正式卡片中显示整数或百分比）。按设计稿去掉整数的千位分隔符，不改实际数值。
+	measure 报表卡片数值 =
+			VAR _v = [卡片实际值]
+			RETURN IF ( ISBLANK ( _v ), "—", FORMAT ( _v, IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "0" ) ) )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 62c9e524-46e9-4887-ae4e-e611b68083d3
+
+	/// 部门页按钮使用中文部门名称；退货率显示对应年度去重后的部门数量。
+	measure 报表部门标记 =
+			VAR _metric = SELECTEDVALUE ( 'dim_指标'[指标] )
+			RETURN SWITCH ( _metric, "退货率", "部门数量:" & FORMAT ( [考核对象数量], "0" ), "成交率", "质量部", [显示考核对象] )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: a0baf368-d599-446a-a9f6-25c66e00f8ab
+
+	/// 历史年度值和该年度对应的考核对象一起显示，年度由已确认分析月份推导。
+	measure 历史2年度显示 =
+			VAR _year = YEAR ( MAX ( '参数_分析设置'[分析月份] ) ) - 2
+			VAR _value = CALCULATE ( [历史年度实际值], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			VAR _metric = SELECTEDVALUE ( 'dim_指标'[指标] )
+			VAR _names = CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			VAR _count = CALCULATE ( [历史考核对象数量], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			VAR _object = SWITCH ( _metric,
+			    "成交率", CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year, 'dim_考核对象'[考核对象] = "质量部" ),
+			    "退货率", IF ( _count > 1, LEFT ( _names, FIND ( "、", _names & "、" ) - 1 ) & "等" & FORMAT ( _count, "0" ) & "部门", _names ),
+			    CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year ) )
+			RETURN IF ( ISBLANK ( _value ), "—", FORMAT ( _value, IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" ) ) ) & UNICHAR ( 10 ) & _object
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: d9856589-e18a-466b-bee8-0428bab980c2
+
+	/// 历史年度值和该年度对应的考核对象一起显示，年度由已确认分析月份推导。
+	measure 历史1年度显示 =
+			VAR _year = YEAR ( MAX ( '参数_分析设置'[分析月份] ) ) - 1
+			VAR _value = CALCULATE ( [历史年度实际值], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			VAR _metric = SELECTEDVALUE ( 'dim_指标'[指标] )
+			VAR _names = CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			VAR _count = CALCULATE ( [历史考核对象数量], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			VAR _object = SWITCH ( _metric,
+			    "成交率", CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year, 'dim_考核对象'[考核对象] = "质量部" ),
+			    "退货率", IF ( _count > 1, LEFT ( _names, FIND ( "、", _names & "、" ) - 1 ) & "等" & FORMAT ( _count, "0" ) & "部门", _names ),
+			    CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year ) )
+			RETURN IF ( ISBLANK ( _value ), "—", FORMAT ( _value, IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" ) ) ) & UNICHAR ( 10 ) & _object
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 3965d07b-9025-4608-91f8-4696a7ca1f88
+
+	/// 历史年度值和该年度对应的考核对象一起显示，年度由已确认分析月份推导。
+	measure 历史0年度显示 =
+			VAR _year = YEAR ( MAX ( '参数_分析设置'[分析月份] ) ) - 0
+			VAR _value = CALCULATE ( [历史年度实际值], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			VAR _metric = SELECTEDVALUE ( 'dim_指标'[指标] )
+			VAR _names = CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			VAR _count = CALCULATE ( [历史考核对象数量], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			VAR _object = SWITCH ( _metric,
+			    "成交率", CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year, 'dim_考核对象'[考核对象] = "质量部" ),
+			    "退货率", IF ( _count > 1, LEFT ( _names, FIND ( "、", _names & "、" ) - 1 ) & "等" & FORMAT ( _count, "0" ) & "部门", _names ),
+			    CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year ) )
+			RETURN IF ( ISBLANK ( _value ), "—", FORMAT ( _value, IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" ) ) ) & UNICHAR ( 10 ) & _object
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 150010f9-20ce-4380-8820-7c8172052662
+
+	/// 灰色条形补足到实际和目标较大值的1.5倍，保持条形在卡片中间范围。
+	measure 条形剩余值 =
+			VAR _v = [卡片实际值]
+			VAR _t = [卡片单一目标]
+			RETURN IF ( NOT ISBLANK ( _v ), MAX ( _v, _t ) * 1.5 - _v )
+		displayFolder: 05_正式报表
+		lineageTag: 3d2c3fe9-cda9-444f-9ab6-0b032dfde25b
+
+		formatStringDefinition = IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "#,##0" )
+
+	/// 服务报表（在退货率悬浮提示中显示中文部门名单）。名单按对应年份读取，以顿号分开。
+	measure 报表提示部门名单 =
+			VAR _year = SELECTEDVALUE ( 'DIM_Date'[年份], YEAR ( MAX ( '参数_分析设置'[分析月份] ) ) )
+			VAR _value = CALCULATE ( [历史考核对象名单], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			RETURN _value
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 4bb79615-e6fc-4b8d-b181-a108e6531e2d
+
+	/// 历史卡片悬浮时读取该卡片年份；当前卡片悬浮时默认分析年份。名单按行列出部门。
+	measure 报表提示部门数量 =
+			VAR _year = SELECTEDVALUE ( 'DIM_Date'[年份], YEAR ( MAX ( '参数_分析设置'[分析月份] ) ) )
+			VAR _value = CALCULATE ( [历史考核对象数量], REMOVEFILTERS ( 'DIM_Date' ), 'DIM_Date'[年份] = _year )
+			RETURN _value
+		formatString: 0
+		displayFolder: 05_正式报表
+		lineageTag: 8ff8c7cc-b317-4202-8897-088f53b74682
+
+	/// 服务报表（在模型层准备同比百分比文字）。与黑色的“同比”标签分开显示。
+	measure 报表同比数值 =
+			VAR _value = [同比]
+			RETURN IF ( ISBLANK ( _value ), "—", FORMAT ( _value, "+0.00%;-0.00%;0.00%" ) )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 567cc3c1-ade3-4276-84a8-6c894c996584
+
+	/// 服务报表（在模型层读取所选年份的年度实际）。历史数值与部门名称分开排版。
+	measure 报表历史年度数值 =
+			VAR _value = [历史年度实际值]
+			RETURN IF ( ISBLANK ( _value ), "—", FORMAT ( _value, IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "0" ) ) )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 23c9dc97-977a-4059-a510-b9f2c89a3f70
+
+	/// 服务报表（在模型层提供历史年份的中文部门标签）。多个退货部门在小按钮中显示“部门”，完整名单通过提示显示。
+	measure 报表历史部门名称 =
+			VAR _metric = SELECTEDVALUE ( 'dim_指标'[指标] )
+			VAR _names = [历史考核对象名单]
+			VAR _count = [历史考核对象数量]
+			RETURN IF ( _metric = "成交率", CALCULATE ( [历史考核对象名单], 'dim_考核对象'[考核对象] = "质量部" ),
+			    IF ( _metric = "退货率" && _count > 1, "质量部", _names ) )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 907951bc-fbc6-469d-afc0-783df1e33b83
+
+	/// 服务报表（在模型中按同比方向与好坏选择设计稿箭头原图）。图片使用原 PNG，不改源业务数值。
+	measure 报表同比箭头 =
+			VAR _v = [同比]
+			VAR _green = [同比颜色] = "#6ED097"
+			RETURN IF ( ISBLANK ( _v ) || _v = 0, BLANK (),
+			    IF ( _v > 0, IF ( _green, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAAAXNSR0IArs4c6QAAAARzQklUCAgICHwIZIgAAAFRSURBVEiJ7ZI9TgJRFEbPfWACiQWl5bgCeYWJFiYSSwvZAhUZSYAdCCsYIwSw0h24BCi1AnaAiYWFiRQmFg5zLYBkQPmLxGpO+d2b7+S+PIiIiJhDtlFS7jadkXAn4EyiOOCrfJ3UDoov4d34NoQ+OAZO53PRmAPMCM02hHXrdoyyDzyG80DNj4M2urDYbVYQufB1lGvYQm+al7teaiTiCXo0iT6A3d861r5wLOMKNB0X81DueqmpLJBkW9As6NDXwAJvi3pim8kAdAiyh9lJHOfPngJJtkHTY5lmGrbQO8yfPxtjXmtp93a+a+UvnZEp1QA6RmhPxgPACctW9S190lK/5YVlN9at1K3bEZHrycpGMpZ9mlK/5alqGUCVXM2699OZBJ9VlUQWwKhkGvZysI6MZU9a7DXeQVLzsr+y8EKjYn1w6tbtbEsWERER8T98A7QEggYpcDuKAAAAAElFTkSuQmCC", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAAAXNSR0IArs4c6QAAAARzQklUCAgICHwIZIgAAAFQSURBVEiJ7ZM9SgNBGIafSVYxYBEEIZAVxsIkmyrpbAS9gUfQAwjiBYwnSG2lN/AISalVrOJmERJhAykEU9jtz2eRLGwi+cO126eY4p3hfWaYGUhJSZlDJVHyVinorDIeBNEASpSBEl95nBy9D934WiMJIRgaOFXR/tVkCLdDDcwIM0noLNttB+IfAs/xPAwzvw60kbBXNRuOZXacarEWz/ta5w1lNIHjafS9qGNtYa9qNpRwC9QQnvpa5yOZl/NbAufAGCV1QT4X9WQ3lAGMQRXCLdm52d178XJ+C6hNZWel7vD1aj//kUGNyrZ7P9+18pXGZaK4C0PaWUVrMisDUDouW9W3VOhYB02Q60hW7rqN+XwT2VLhTKnIZckePkZzk3vzOgCBBGeWPRqsI1uKY5lfjmWKUyle/LksxsKPH4hfB0Nb9rCdpDAlJSXl//kBLX5/H+VygrsAAAAASUVORK5CYII=" ),
+			        IF ( _green, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAAAXNSR0IArs4c6QAAAARzQklUCAgICHwIZIgAAAFLSURBVEiJ7ZMxTgJBFIa/N1Jgt0fAxAOwsbGEm0jnKuB6AuAEEFTGDjtLLe3gBrOeAI5ApyZknsW6aAgEJUQTs181mffy/vkmM5CTk5PzZ9SdrcTOlnY916wtCEMvTBrOnvxKoMIYQIRhww3i5XozsZNmYic/vYW1gVflqIbSSUOl23S2vQhL1yWg5EXdmbspfzdQNjU0nW0jtABQOh7GRhilVZ2BBKCzuWp1EJ4nWxtm9MOonZkitIzow8dJ74y+HYAkIEFBZJSZNtwgvni+7W5luNIUpkap9sJoGrtu4GV/BFrOTAuyNwQtG/Vhb8l6o+EK06lXar0wmgL0wsuZ0ZeqIo+pqXGghwBzTLC14SZiZ0teuAeOsz2vVK/DaPy1r7CLsLqzFb94SJ8YL8XlvZ0EFnhNPPsJaED6h4sCs/7R6dMu5ufk/HPeAd3pgInpK8hbAAAAAElFTkSuQmCC", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAAAXNSR0IArs4c6QAAAARzQklUCAgICHwIZIgAAAFSSURBVEiJ7ZKxasJQFIa/00TQzVGIhRSKTZzs1lHfpL6Bb6A+gY9gt47t2E3fwCzVmA5mUHDMZkHj6aApIhVbkRZKvuVezjnc/36XCykpKSl/xsgpVkdOwT73uReHGoZo1xBzEjjW/a8EIvQ3q3R912rstwPXmgSuNfnpKxwMLA1ndRXamyHpjMvFVtLb7MUGsQ0xB0HZqnw3UI4NjMvFlihNABXa6zV9Q+ht2xGQByJEa6XhzDvZMOFmOG0lpqI0DeFpc1V9yCzMK8AD8qj0ElPftRpv7mXnJMOvTEHDWOOa68/DiW3nl7lVD6gkpqh0gQqit/vWRw33TRUNY5W6689DgKswjDILsybwvDUdANcA8VryJxseY+QUbEPMR+AuqcVKzfWn/d058zxhxerOR/pEDLL7tbMEZt9Nb5lbeYpun1CyIho5r7OXc5yfkvLP+QCEBnbwmIxsbAAAAABJRU5ErkJggg==" ) ) )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 480e210e-dfd7-4603-9db9-d00b68794ac5
+		dataCategory: ImageUrl
+
+	/// 服务报表（在成交率弹出详情中显示两位小数的百分比）。数据仍读取对应部门的年度实际值。
+	measure 报表部门详情数值 =
+			VAR _v = [卡片实际值]
+			RETURN IF ( ISBLANK ( _v ), "—", FORMAT ( _v, "0.00%" ) )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 580e8afc-a24b-4e34-81ec-40c4e59d25d5
+
+	/// 服务报表（在单件商品平均利润卡片下方显示源数据的一档目标）。采用设计图目标区域，不增加源数据中没有的其他目标档位。
+	measure 报表卡片目标 =
+			VAR _v = [卡片单一目标]
+			RETURN IF ( ISBLANK ( _v ), "—", FORMAT ( _v, IF ( SELECTEDVALUE ( 'dim_指标'[数值类型] ) = "百分比", "0.0%", "0" ) ) )
+		formatString: General
+		displayFolder: 05_正式报表
+		lineageTag: 7335339d-53a9-4240-804e-8e4100b6550a
+
+	column 源记录编号
+		dataType: int64
+		isHidden
+		isNullable: false
+		lineageTag: f5cab095-749c-4434-b9ce-48734c1a298f
+		summarizeBy: none
+		sourceColumn: 源记录编号
+
+		annotation SummarizationSetBy = Automatic
+
+	column 指标编号
+		dataType: int64
+		isHidden
+		isNullable: false
+		lineageTag: 9ccab93f-aa95-490e-a316-63741a512033
+		summarizeBy: none
+		sourceColumn: 指标编号
+
+		annotation SummarizationSetBy = Automatic
+
+	column 考核对象编号
+		dataType: int64
+		isHidden
+		isNullable: false
+		lineageTag: a8d2ea83-6b49-4f61-8fa9-cec94e7f5797
+		summarizeBy: none
+		sourceColumn: 考核对象编号
+
+		annotation SummarizationSetBy = Automatic
+
+	column 指标
+		dataType: string
+		isHidden
+		isNullable: false
+		lineageTag: 452569d8-c824-47ea-b9c3-4488ff1ade43
+		summarizeBy: none
+		sourceColumn: 指标
+
+	column 考核对象
+		dataType: string
+		isHidden
+		isNullable: false
+		lineageTag: 7a972014-722c-4498-bf64-6c86e30b4cd1
+		summarizeBy: none
+		sourceColumn: 考核对象
+
+	column 周期类型
+		dataType: string
+		isHidden
+		isNullable: false
+		lineageTag: 196d644d-9425-41de-98c8-9c0c2a3e4ba1
+		summarizeBy: none
+		sourceColumn: 周期类型
+
+	column 日期
+		dataType: dateTime
+		isHidden
+		isNullable: false
+		formatString: Long Date
+		lineageTag: bfc870d9-7ea5-4bac-919f-8b14b14ecd35
+		summarizeBy: none
+		sourceColumn: 日期
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column 年份
+		dataType: int64
+		isHidden
+		isNullable: false
+		lineageTag: 2a474f3d-9531-4f3d-b158-a450e271272b
+		summarizeBy: none
+		sourceColumn: 年份
+
+		annotation SummarizationSetBy = Automatic
+
+	column 季度
+		dataType: int64
+		isHidden
+		isNullable: false
+		lineageTag: ee79af2b-dfbc-4b07-a3da-52f63d1d5ed7
+		summarizeBy: none
+		sourceColumn: 季度
+
+		annotation SummarizationSetBy = Automatic
+
+	column 月份
+		dataType: int64
+		isHidden
+		isNullable: false
+		lineageTag: 182022fc-f90d-4ff6-bc07-990fd555c16e
+		summarizeBy: none
+		sourceColumn: 月份
+
+		annotation SummarizationSetBy = Automatic
+
+	column 年月
+		dataType: string
+		isHidden
+		isNullable: false
+		lineageTag: 5acd899b-a48f-47e9-b909-45d44d8a5123
+		summarizeBy: none
+		sourceColumn: 年月
+
+	column 目标及实际
+		dataType: string
+		isHidden
+		isNullable: false
+		lineageTag: 89fe1200-bc92-4a7e-9f65-764449608df7
+		summarizeBy: none
+		sourceColumn: 目标及实际
+
+	column 数据
+		dataType: decimal
+		isHidden
+		lineageTag: 04c2e842-fa6f-492c-af34-359544788907
+		summarizeBy: none
+		sourceColumn: 数据
+
+		annotation SummarizationSetBy = Automatic
+
+	column 原始数据
+		dataType: decimal
+		isHidden
+		lineageTag: aa8d02f3-1b1e-4a05-822b-ea1294cae466
+		summarizeBy: none
+		sourceColumn: 原始数据
+
+		annotation SummarizationSetBy = Automatic
+
+	column 是否修正
+		dataType: boolean
+		isHidden
+		isNullable: false
+		lineageTag: b183b4c8-94e6-4aff-8934-d4b7d47d0b28
+		summarizeBy: none
+		sourceColumn: 是否修正
+
+	column 原始时间
+		dataType: string
+		isHidden
+		isNullable: false
+		lineageTag: d7ec09a2-d313-4995-b843-3dcb401081c4
+		summarizeBy: none
+		sourceColumn: 原始时间
+
+	column 原始考核对象
+		dataType: string
+		isHidden
+		isNullable: false
+		lineageTag: 3c1713bd-859e-4292-8093-d8e876ce057f
+		summarizeBy: none
+		sourceColumn: 原始考核对象
+
+	column 共享对象数量
+		dataType: int64
+		isHidden
+		isNullable: false
+		lineageTag: 356cc1e5-1364-4d3d-a1c7-2d3ee24c12fb
+		summarizeBy: none
+		sourceColumn: 共享对象数量
+
+		annotation SummarizationSetBy = Automatic
+
+	column CategoryKey
+		dataType: string
+		isHidden
+		isNullable: false
+		lineageTag: a9c5045b-da88-4e0a-98b6-d40d52e995da
+		summarizeBy: none
+		sourceColumn: CategoryKey
+
+	partition fact_指标值 = m
+		mode: import
+		queryGroup: fact
+		source =
+				let
+				    源 = 整理_销售分析,
+				    合并指标编号 = Table.NestedJoin(源, {"指标"}, dim_指标, {"指标"}, "指标维度", JoinKind.LeftOuter),
+				    展开指标编号 = Table.ExpandTableColumn(合并指标编号, "指标维度", {"指标编号"}),
+				    合并对象编号 = Table.NestedJoin(展开指标编号, {"考核对象"}, dim_考核对象, {"考核对象"}, "对象维度", JoinKind.LeftOuter),
+				    展开对象编号 = Table.ExpandTableColumn(合并对象编号, "对象维度", {"考核对象编号"}),
+				    检查合并行数与匹配 = if Table.RowCount(展开对象编号) = Table.RowCount(源) and List.NonNullCount(展开对象编号[指标编号]) = Table.RowCount(源) and List.NonNullCount(展开对象编号[考核对象编号]) = Table.RowCount(源) then 展开对象编号 else error "维度匹配失败或合并增加行数",
+				    检查重复标识 = Table.Group(检查合并行数与匹配, {"CategoryKey"}, {{"记录数", each Table.RowCount(_), Int64.Type}}),
+				    确认记录唯一 = if Table.RowCount(Table.SelectRows(检查重复标识, each [记录数] <> 1)) = 0 then 检查合并行数与匹配 else error "记录标识重复，请检查源数据，不自动删除",
+				    选择输出列 = Table.SelectColumns(确认记录唯一, {"源记录编号", "指标编号", "考核对象编号", "指标", "考核对象", "周期类型", "日期", "年份", "季度", "月份", "年月", "目标及实际", "数据", "原始数据", "是否修正", "原始时间", "原始考核对象", "共享对象数量", "CategoryKey"}),
+				    按源记录对象排序 = Table.Sort(选择输出列, {{"源记录编号", Order.Ascending}, {"考核对象编号", Order.Ascending}})
+				in
+				    按源记录对象排序
+
+	annotation PBI_ResultType = Table
+

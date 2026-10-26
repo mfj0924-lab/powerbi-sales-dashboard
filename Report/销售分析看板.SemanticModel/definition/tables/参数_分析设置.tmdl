@@ -1,0 +1,23 @@
+/// 默认分析月份取月度实际非空记录的最新月份，当前为2025-03；不使用年度、季度最大日期或电脑日期。
+table 参数_分析设置
+	isHidden
+	lineageTag: d6054170-1a00-4b63-b2f8-2927fcad2223
+
+	column 分析月份
+		lineageTag: 3cf20c6e-a1cb-40e0-90e5-390df79b970b
+		isNameInferred
+		sourceColumn: [分析月份]
+
+	partition 参数_分析设置 = calculated
+		mode: import
+		source =
+				ROW (
+				    "分析月份",
+				    CALCULATE (
+				        MAX ( 'fact_指标值'[日期] ),
+				        'fact_指标值'[周期类型] = "月度",
+				        'fact_指标值'[目标及实际] = "实际",
+				        NOT ISBLANK ( 'fact_指标值'[数据] )
+				    )
+				)
+

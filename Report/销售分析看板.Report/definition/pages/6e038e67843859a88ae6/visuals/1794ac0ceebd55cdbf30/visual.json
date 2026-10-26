@@ -1,0 +1,16 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "1794ac0ceebd55cdbf30",
+  "position": {
+    "x": 0,
+    "y": 0,
+    "z": 144000,
+    "height": 100,
+    "width": 740,
+    "tabOrder": 0
+  },
+  "visualGroup": {
+    "displayName": "公司页页眉与导航",
+    "groupMode": "ScaleMode"
+  }
+}

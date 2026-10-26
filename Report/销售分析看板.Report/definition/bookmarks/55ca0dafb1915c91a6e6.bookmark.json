@@ -1,0 +1,243 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json",
+  "displayName": "成品按时销售率_详情",
+  "name": "55ca0dafb1915c91a6e6",
+  "options": {
+    "applyOnlyToTargetVisuals": true,
+    "targetVisualNames": [
+      "f828f88925275194b3fa",
+      "48902bbdb9605f0aac71",
+      "dd395e994f2f52dbb29d",
+      "021a04c60759543684b9",
+      "825cd1d501b4556291c4",
+      "ec0a4ce495d15648a663",
+      "2f283a74e8d15270971a",
+      "d63fd8784a3b583fa142",
+      "c91ec104d9b555129199",
+      "4c53b2639dac5fe49c25",
+      "0ea85de7919a5d71a1a1",
+      "b47ccac63bfd525e9cc5",
+      "52f617a97e0b56728ef4",
+      "776ad941c72451aa9a28",
+      "1ee8e928fd8b58ee99c2",
+      "ac2c0840b16b54f99a51",
+      "378fdee445e558e18b6f",
+      "83d2efc2044854fab9ba",
+      "d6e860a374835bd0ba6c",
+      "24d32ca7f07c5962bdaf",
+      "d2514ef24cf45c97a41b",
+      "6e97851909c8518db489",
+      "682e1cfd3b9b5caa9508",
+      "490515bb307e54ee9240",
+      "136cb986b89755ac932b",
+      "2c3e589dbcd552db8d99",
+      "b03ff9a2129453c58d26",
+      "fbac1e7dd69755c38a36",
+      "8b6acc2a7aa450f49c5d",
+      "4f9f01c6bb615569af67"
+    ],
+    "suppressActiveSection": true,
+    "suppressData": true
+  },
+  "explorationState": {
+    "version": "1.0",
+    "activeSection": "6e038e67843859a88ae6",
+    "sections": {
+      "6e038e67843859a88ae6": {
+        "visualContainers": {
+          "f828f88925275194b3fa": {
+            "singleVisual": {}
+          },
+          "48902bbdb9605f0aac71": {
+            "singleVisual": {}
+          },
+          "dd395e994f2f52dbb29d": {
+            "singleVisual": {}
+          },
+          "021a04c60759543684b9": {
+            "singleVisual": {}
+          },
+          "825cd1d501b4556291c4": {
+            "singleVisual": {}
+          },
+          "ec0a4ce495d15648a663": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "2f283a74e8d15270971a": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "d63fd8784a3b583fa142": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "c91ec104d9b555129199": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "4c53b2639dac5fe49c25": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "0ea85de7919a5d71a1a1": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "b47ccac63bfd525e9cc5": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "52f617a97e0b56728ef4": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "776ad941c72451aa9a28": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "1ee8e928fd8b58ee99c2": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "ac2c0840b16b54f99a51": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "378fdee445e558e18b6f": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "83d2efc2044854fab9ba": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "d6e860a374835bd0ba6c": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "24d32ca7f07c5962bdaf": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "d2514ef24cf45c97a41b": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "6e97851909c8518db489": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "682e1cfd3b9b5caa9508": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "490515bb307e54ee9240": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "136cb986b89755ac932b": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "2c3e589dbcd552db8d99": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "b03ff9a2129453c58d26": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "fbac1e7dd69755c38a36": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "8b6acc2a7aa450f49c5d": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "4f9f01c6bb615569af67": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          }
+        },
+        "visualContainerGroups": {}
+      }
+    }
+  }
+}

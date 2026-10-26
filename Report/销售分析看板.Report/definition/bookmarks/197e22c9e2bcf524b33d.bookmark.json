@@ -1,0 +1,283 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json",
+  "displayName": "部门卡片_年度",
+  "name": "197e22c9e2bcf524b33d",
+  "options": {
+    "targetVisualNames": [
+      "79030a2b63875a939a24",
+      "d9942241136e5453a087",
+      "ab27c605511a5b8ca851",
+      "b7ab0c65e04a5cefaad3",
+      "b4aa62cf9cf7516d8401",
+      "bcf8c54b885357538be7",
+      "eb34de9cd09d58f2bcea",
+      "0009b62cdc1729ef37a9",
+      "0a759f9d8b1bfe063490",
+      "e7dce146fb940fe5952f",
+      "5211b133fe41eae8543a",
+      "65d0afa9e3eac66d8f0d",
+      "8fce145c4a5cbabd194f",
+      "a9428caf49e8506ae45a",
+      "3e8be1ce7bfd63ac627d",
+      "ad373d180be6d8fddebd",
+      "64f3a4afd5d0b1ed741f",
+      "3630be12cf3f9482122f",
+      "8cc18cd789a8557a8173",
+      "76ddf6600b395925afa0",
+      "e88f0a31f94b54b4a0f2",
+      "8daadd949e835024bd79",
+      "d65ff5e2f3c45b03b39e",
+      "5786e2432054536faae9",
+      "56653901ecec53d9bb66",
+      "73d3db6a4e665a26a9b4",
+      "4e9e7902b0e457f49da1",
+      "abafce505e5d5bf78d05",
+      "f73d7bb1cf63c0dd324b",
+      "d0744ade2f4a3031f609",
+      "d562c9fa3555a281b534",
+      "1df0a04274ec7dfb2618",
+      "1731423289daf432b4b3",
+      "29aef7c2dadebeb3c473",
+      "a023906e24af3cabaad8",
+      "bf09152a11635077a7d6",
+      "63e821ee8d5bf8993348",
+      "c744fd7e306cc3039c0d"
+    ],
+    "suppressActiveSection": true,
+    "suppressData": true
+  },
+  "explorationState": {
+    "version": "1.0",
+    "activeSection": "5d9f6a52feb15b839ac5",
+    "sections": {
+      "5d9f6a52feb15b839ac5": {
+        "visualContainers": {
+          "79030a2b63875a939a24": {
+            "singleVisual": {}
+          },
+          "d9942241136e5453a087": {
+            "singleVisual": {}
+          },
+          "ab27c605511a5b8ca851": {
+            "singleVisual": {}
+          },
+          "b7ab0c65e04a5cefaad3": {
+            "singleVisual": {}
+          },
+          "b4aa62cf9cf7516d8401": {
+            "singleVisual": {}
+          },
+          "bcf8c54b885357538be7": {
+            "singleVisual": {}
+          },
+          "eb34de9cd09d58f2bcea": {
+            "singleVisual": {}
+          },
+          "0009b62cdc1729ef37a9": {
+            "singleVisual": {}
+          },
+          "0a759f9d8b1bfe063490": {
+            "singleVisual": {}
+          },
+          "e7dce146fb940fe5952f": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "5211b133fe41eae8543a": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "65d0afa9e3eac66d8f0d": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "8fce145c4a5cbabd194f": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "a9428caf49e8506ae45a": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "3e8be1ce7bfd63ac627d": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "ad373d180be6d8fddebd": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "64f3a4afd5d0b1ed741f": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "3630be12cf3f9482122f": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "8cc18cd789a8557a8173": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "76ddf6600b395925afa0": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "e88f0a31f94b54b4a0f2": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "8daadd949e835024bd79": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "d65ff5e2f3c45b03b39e": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "5786e2432054536faae9": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "56653901ecec53d9bb66": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "4e9e7902b0e457f49da1": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "abafce505e5d5bf78d05": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "f73d7bb1cf63c0dd324b": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "d0744ade2f4a3031f609": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "d562c9fa3555a281b534": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "1df0a04274ec7dfb2618": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "1731423289daf432b4b3": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "29aef7c2dadebeb3c473": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "a023906e24af3cabaad8": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "63e821ee8d5bf8993348": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "c744fd7e306cc3039c0d": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          }
+        },
+        "visualContainerGroups": {
+          "73d3db6a4e665a26a9b4": {
+            "isHidden": true
+          },
+          "bf09152a11635077a7d6": {
+            "isHidden": true
+          }
+        }
+      }
+    }
+  }
+}

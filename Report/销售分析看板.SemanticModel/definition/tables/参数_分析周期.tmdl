@@ -1,0 +1,21 @@
+/// 切换公司卡片的年度/月度模式，不连接事实表，也不影响明细趋势图。
+table 参数_分析周期
+	lineageTag: 8d874e6c-1773-440f-83b8-e146b5db1099
+
+	column 分析周期
+		lineageTag: 1831c2d9-a670-4c9a-8d25-bb675b847bdf
+		isNameInferred
+		sourceColumn: [分析周期]
+		sortByColumn: 排序
+
+	column 排序
+		isHidden
+		lineageTag: 6555761e-8109-4707-b9b7-17e40c410511
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [排序]
+
+	partition 参数_分析周期 = calculated
+		mode: import
+		source = DATATABLE ( "分析周期", STRING, "排序", INTEGER, { { "年度", 1 }, { "月度", 2 } } )
+

@@ -1,0 +1,36 @@
+/// 只安排矩阵行顺序，实际在第一行；不同目标类型通过可视化筛选选择。
+table 参数_明细行
+	lineageTag: fa130667-6a55-4e90-bf78-b2725316cb85
+
+	column 行项目
+		lineageTag: a988f7f8-e564-4c48-99be-54644bc231eb
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [行项目]
+		sortByColumn: 排序
+
+	column 排序
+		isHidden
+		lineageTag: 83e0aa2b-53c4-48b6-837e-eccf978232ac
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [排序]
+
+	column 目标类型
+		isHidden
+		lineageTag: 9b2a9890-b499-46c6-95be-64165949a61c
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [目标类型]
+
+	partition 参数_明细行 = calculated
+		mode: import
+		source =
+				DATATABLE ( "行项目", STRING, "排序", INTEGER, "目标类型", STRING, {
+				    { "实际", 1, "通用" },
+				    { "目标", 2, "单目标" },
+				    { "及格目标", 3, "多目标" },
+				    { "必达目标", 4, "多目标" },
+				    { "挑战目标", 5, "多目标" }
+				} )
+

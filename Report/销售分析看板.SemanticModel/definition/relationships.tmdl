@@ -1,0 +1,12 @@
+relationship 关系_指标
+	fromColumn: fact_指标值.指标编号
+	toColumn: dim_指标.指标编号
+
+relationship 关系_考核对象
+	fromColumn: fact_指标值.考核对象编号
+	toColumn: dim_考核对象.考核对象编号
+
+relationship 关系_日期
+	fromColumn: fact_指标值.日期
+	toColumn: DIM_Date.日期
+

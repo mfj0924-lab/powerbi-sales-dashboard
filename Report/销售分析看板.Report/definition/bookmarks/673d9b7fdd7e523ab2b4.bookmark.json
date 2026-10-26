@@ -1,0 +1,20 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json",
+  "displayName": "进入公司概览",
+  "name": "673d9b7fdd7e523ab2b4",
+  "options": {
+    "targetVisualNames": [],
+    "suppressData": true,
+    "suppressDisplay": true
+  },
+  "explorationState": {
+    "version": "1.0",
+    "activeSection": "6e038e67843859a88ae6",
+    "sections": {
+      "6e038e67843859a88ae6": {
+        "visualContainers": {},
+        "visualContainerGroups": {}
+      }
+    }
+  }
+}

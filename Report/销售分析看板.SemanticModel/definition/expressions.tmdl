@@ -1,0 +1,82 @@
+/// 供清洗与检查使用，不单独加载到模型。
+expression 源_销售分析 =
+		let
+		    路径 = Text.TrimEnd(DataSourceDirPath, {"\", "/"}) & "\",
+		    文件夹内容 = Folder.Files(路径),
+		    筛选指定文件 = Table.SelectRows(文件夹内容, each [Name] = "销售分析.xlsx" and [Folder Path] = 路径 and not Text.StartsWith([Name], "~$")),
+		    检查文件数量 = if Table.RowCount(筛选指定文件) = 1 then 筛选指定文件 else error "数据目录必须恰好包含一份销售分析.xlsx",
+		    读取工作簿 = Excel.Workbook(检查文件数量{0}[Content], null, true),
+		    筛选工作表 = Table.SelectRows(读取工作簿, each [Item] = "销售分析" and [Kind] = "Sheet"),
+		    检查工作表 = if Table.RowCount(筛选工作表) = 1 then 筛选工作表{0}[Data] else error "未找到唯一的销售分析工作表",
+		    提升标题 = Table.PromoteHeaders(检查工作表, [PromoteAllScalars=true]),
+		    选择所需列 = Table.SelectColumns(提升标题, {"指标归类", "指标", "级别", "考核周期", "目标及实际", "时间", "数据", "数据源", "考核对象"}),
+		    添加源行号 = Table.AddIndexColumn(选择所需列, "源记录编号", 2, 1, Int64.Type),
+		    排除全空记录 = Table.SelectRows(添加源行号, each List.NonNullCount(Record.FieldValues(Record.RemoveFields(_, {"源记录编号"}))) > 0)
+		in
+		    排除全空记录
+	lineageTag: 0d8db722-93c3-4a76-b928-77d625c23321
+	queryGroup: source
+
+/// 清洗时间和对象格式；按带教确认保留全部源业务数值。
+expression 整理_销售分析 =
+		let
+		    源 = 源_销售分析,
+		    保留原始时间 = Table.DuplicateColumn(源, "时间", "原始时间"),
+		    保留原始对象 = Table.DuplicateColumn(保留原始时间, "考核对象", "原始考核对象"),
+		    保留原始数据 = Table.DuplicateColumn(保留原始对象, "数据", "原始数据"),
+		    时间改为文本 = Table.TransformColumns(保留原始数据, {{"时间", each if Value.Is(_, type date) or Value.Is(_, type datetime) then Date.ToText(Date.From(_), "yyyy-MM-dd") else Text.Trim(Text.From(_, "en-US")), type text}, {"原始时间", each Text.From(_, "en-US"), type text}}),
+		    清除首尾空格 = Table.TransformColumns(时间改为文本, List.Transform({"指标归类", "指标", "级别", "考核周期", "目标及实际", "数据源"}, (列) => {列, each if _ = null then null else Text.Trim(Text.Clean(_)), type text})),
+		    对象拆成列表 = Table.TransformColumns(清除首尾空格, {{"考核对象", each if _ = null then error "考核对象不能为空" else List.Select(Text.SplitAny(Text.Trim(_), " " & Character.FromNumber(9) & Character.FromNumber(10) & Character.FromNumber(13) & Character.FromNumber(160) & Character.FromNumber(12288)), each _ <> ""), type list}}),
+		    添加共享数量 = Table.AddColumn(对象拆成列表, "共享对象数量", each let 对象 = [考核对象] in if List.Count(对象) = 0 or List.Count(List.Distinct(对象)) <> List.Count(对象) then error "考核对象为空或同一记录重复部门" else List.Count(对象), Int64.Type),
+		    拆分为行 = Table.ExpandListColumn(添加共享数量, "考核对象"),
+		    添加时间解析 = Table.AddColumn(拆分为行, "时间解析", each
+		        let 文本 = [时间], 年 = try Number.FromText(Text.Start(文本, 4)) otherwise null
+		        in if Text.Length(文本) = 5 and Text.EndsWith(文本, "年") then [日期 = #date(年, 1, 1), 周期类型 = "年度"]
+		        else if Text.Length(文本) = 7 and Text.Middle(文本, 4, 2) = "年Q" then
+		            let 季度号 = Number.FromText(Text.End(文本, 1)) in
+		            if List.Contains({1, 2, 3, 4}, 季度号) then [日期 = #date(年, (季度号 - 1) * 3 + 1, 1), 周期类型 = "季度"] else error "季度号不在1至4之间"
+		        else if Text.Length(文本) = 10 and Text.Middle(文本, 4, 1) = "-" then [日期 = Date.FromText(文本, [Format="yyyy-MM-dd", Culture="en-US"]), 周期类型 = "月度"]
+		        else let 序列号 = Number.FromText(文本, "en-US") in
+		            if Number.Mod(序列号, 1) = 0 and 序列号 > 60 then [日期 = Date.AddDays(#date(1899, 12, 30), 序列号), 周期类型 = "月度"] else error "无法识别时间格式"),
+		    展开日期周期 = Table.ExpandRecordColumn(添加时间解析, "时间解析", {"日期", "周期类型"}),
+		    设置数据类型 = Table.TransformColumnTypes(展开日期周期, {{"源记录编号", Int64.Type}, {"时间", type text}, {"原始时间", type text}, {"考核对象", type text}, {"原始考核对象", type text}, {"数据", Currency.Type}, {"原始数据", Currency.Type}, {"日期", type date}, {"周期类型", type text}}),
+		    添加年份 = Table.AddColumn(设置数据类型, "年份", each Date.Year([日期]), Int64.Type),
+		    添加季度 = Table.AddColumn(添加年份, "季度", each Date.QuarterOfYear([日期]), Int64.Type),
+		    添加月份 = Table.AddColumn(添加季度, "月份", each Date.Month([日期]), Int64.Type),
+		    添加年月 = Table.AddColumn(添加月份, "年月", each Date.ToText([日期], "yyyy-MM"), type text),
+		    标记未改动数据 = Table.AddColumn(添加年月, "是否修正", each false, type logical),
+		    添加记录标识 = Table.AddColumn(标记未改动数据, "CategoryKey", each Text.Combine({[指标], [考核对象], [周期类型], Date.ToText([日期], "yyyy-MM-dd"), [目标及实际]}, "|"), type text)
+		in
+		    添加记录标识
+	lineageTag: 02ae6b06-9f44-4ccd-b1df-31a016f34089
+	queryGroup: staging
+
+/// 供清洗与检查使用，不单独加载到模型。
+expression 检查_重复记录 =
+		let
+		    源 = 整理_销售分析,
+		    按记录标识分组 = Table.Group(源, {"CategoryKey"}, {{"记录数", each Table.RowCount(_), Int64.Type}}),
+		    保留重复标识 = Table.SelectRows(按记录标识分组, each [记录数] > 1)
+		in
+		    保留重复标识
+	lineageTag: e5556fae-ab7c-4d47-af0d-8ec336d977f5
+	queryGroup: staging
+
+/// 最新有月度实际非空数据的月份；不使用电脑当前日期或未来目标日期。
+expression 分析月份 =
+		let
+		    源 = 整理_销售分析,
+		    筛选月度实际非空 = Table.SelectRows(源, each [周期类型] = "月度" and [目标及实际] = "实际" and [数据] <> null),
+		    最新月份 = if Table.RowCount(筛选月度实际非空) > 0 then Date.StartOfMonth(List.Max(筛选月度实际非空[日期])) else error "没有可用的月度实际数据"
+		in
+		    最新月份
+	lineageTag: 6bcf8205-8945-4f4c-88d1-7798fa61e233
+	queryGroup: staging
+
+/// 销售分析.xlsx和源数据预期结果.json所在文件夹；换电脑或目录时只修改此参数，并把两份文件一起移动。
+expression DataSourceDirPath = "D:\大四上学期\北上智信_数据开发实习\PBI项目实战作业\PBI项目实战作业\项目实战作业\Data\销售分析" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 3b18be13-a7b1-41bd-a825-3045e4e7e579
+	queryGroup: source
+
+	annotation PBI_ResultType = Text
+

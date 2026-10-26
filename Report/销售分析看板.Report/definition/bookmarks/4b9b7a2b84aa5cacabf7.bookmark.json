@@ -1,0 +1,64 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json",
+  "displayName": "显示其他成交率部门",
+  "name": "4b9b7a2b84aa5cacabf7",
+  "options": {
+    "applyOnlyToTargetVisuals": true,
+    "targetVisualNames": [
+      "8cc18cd789a8557a8173",
+      "76ddf6600b395925afa0",
+      "e88f0a31f94b54b4a0f2",
+      "8daadd949e835024bd79",
+      "d65ff5e2f3c45b03b39e",
+      "5786e2432054536faae9",
+      "56653901ecec53d9bb66",
+      "73d3db6a4e665a26a9b4",
+      "4e9e7902b0e457f49da1",
+      "abafce505e5d5bf78d05"
+    ],
+    "suppressActiveSection": true,
+    "suppressData": true
+  },
+  "explorationState": {
+    "version": "1.0",
+    "activeSection": "5d9f6a52feb15b839ac5",
+    "sections": {
+      "5d9f6a52feb15b839ac5": {
+        "visualContainers": {
+          "8cc18cd789a8557a8173": {
+            "singleVisual": {}
+          },
+          "76ddf6600b395925afa0": {
+            "singleVisual": {}
+          },
+          "e88f0a31f94b54b4a0f2": {
+            "singleVisual": {}
+          },
+          "8daadd949e835024bd79": {
+            "singleVisual": {}
+          },
+          "d65ff5e2f3c45b03b39e": {
+            "singleVisual": {}
+          },
+          "5786e2432054536faae9": {
+            "singleVisual": {}
+          },
+          "56653901ecec53d9bb66": {
+            "singleVisual": {}
+          },
+          "4e9e7902b0e457f49da1": {
+            "singleVisual": {}
+          },
+          "abafce505e5d5bf78d05": {
+            "singleVisual": {}
+          }
+        },
+        "visualContainerGroups": {
+          "73d3db6a4e665a26a9b4": {
+            "isHidden": false
+          }
+        }
+      }
+    }
+  }
+}

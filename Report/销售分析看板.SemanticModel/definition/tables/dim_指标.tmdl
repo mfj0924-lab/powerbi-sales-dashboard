@@ -1,0 +1,103 @@
+/// 每行一个指标及其分类、目标类型和达标方向，编号按设计顺序固定。
+table dim_指标
+	lineageTag: 691b7b30-f9a5-400e-8ff0-ee5f28a2d0d8
+
+	/// 指标维度的一端唯一编号，用于连接事实表。
+	column 指标编号
+		dataType: int64
+		isHidden
+		isKey
+		lineageTag: 94f8a7e6-0f0e-4d22-8429-4d82ef157268
+		summarizeBy: none
+		sourceColumn: 指标编号
+
+	column 指标
+		dataType: string
+		lineageTag: 2b98f943-029f-45e2-a806-1f03678822b7
+		summarizeBy: none
+		sourceColumn: 指标
+		sortByColumn: 指标编号
+
+	column 指标归类
+		dataType: string
+		lineageTag: 1f73230d-cd21-4e5b-87bd-0390eda4ae64
+		summarizeBy: none
+		sourceColumn: 指标归类
+
+	column 级别
+		dataType: string
+		lineageTag: 5e29c044-3400-44c0-9645-6b8da8d45e77
+		summarizeBy: none
+		sourceColumn: 级别
+
+	column 考核周期
+		dataType: string
+		lineageTag: ab807319-eab1-423b-8e46-a8a3f05fe13e
+		summarizeBy: none
+		sourceColumn: 考核周期
+
+	column 数据源
+		dataType: string
+		lineageTag: 2718646d-d177-4080-aee2-6f6135cc4163
+		summarizeBy: none
+		sourceColumn: 数据源
+
+	column 数值类型
+		dataType: string
+		lineageTag: af43e823-5601-49ee-b2ec-f3d5867fb6b1
+		summarizeBy: none
+		sourceColumn: 数值类型
+
+	column 目标类型
+		dataType: string
+		lineageTag: b020e01f-3982-4cd1-aad8-26ecc72601d9
+		summarizeBy: none
+		sourceColumn: 目标类型
+
+	column 达标方向
+		dataType: string
+		lineageTag: 07780a2a-55a1-4ed5-bd40-e3459c80269b
+		summarizeBy: none
+		sourceColumn: 达标方向
+
+	hierarchy 指标分类层次结构
+		lineageTag: 642b23ee-7d89-4eec-8c8c-45953b6b244b
+
+		level 指标归类
+			lineageTag: e755d49f-d272-4b6b-a744-751696ca23a8
+			column: 指标归类
+
+		level 指标
+			lineageTag: f2d14766-683d-4884-8d07-14f745f9ece2
+			column: 指标
+
+	partition dim_指标 = m
+		mode: import
+		queryGroup: dim
+		source =
+				let
+				    源 = 整理_销售分析,
+				    选择指标属性 = Table.SelectColumns(源, {"指标", "指标归类", "级别", "考核周期", "数据源"}),
+				    删除完全重复属性 = Table.Distinct(选择指标属性),
+				    检查同名属性 = Table.Group(删除完全重复属性, {"指标"}, {{"属性种类", each Table.RowCount(_), Int64.Type}}),
+				    确认属性唯一 = if Table.RowCount(Table.SelectRows(检查同名属性, each [属性种类] <> 1 or [指标] = null or [指标] = "")) = 0 then 删除完全重复属性 else error "同一指标存在冲突属性或名称为空",
+				    指标规则 = #table(type table [指标=text, 指标编号=Int64.Type, 数值类型=text, 目标类型=text, 达标方向=text], {
+				        {"商品销售额(K)", 1, "数值", "多目标", "较高值更好"},
+				        {"单件商品平均利润", 2, "数值", "单目标", "较高值更好"},
+				        {"净利润率", 3, "百分比", "单目标", "较高值更好"},
+				        {"成品按时销售率", 4, "百分比", "多目标", "较高值更好"},
+				        {"成品加工费用", 5, "数值", "多目标", "较低值更好"},
+				        {"材料平均进价", 6, "数值", "单目标", "较低值更好"},
+				        {"订单数", 7, "整数", "单目标", "较高值更好"},
+				        {"成交率", 8, "百分比", "多目标", "较高值更好"},
+				        {"退货率", 9, "百分比", "多目标", "较低值更好"}}),
+				    合并指标规则 = Table.NestedJoin(确认属性唯一, {"指标"}, 指标规则, {"指标"}, "规则", JoinKind.LeftOuter),
+				    展开规则 = Table.ExpandTableColumn(合并指标规则, "规则", {"指标编号", "数值类型", "目标类型", "达标方向"}),
+				    检查规则匹配 = if Table.RowCount(展开规则) = Table.RowCount(确认属性唯一) and List.NonNullCount(展开规则[指标编号]) = Table.RowCount(展开规则) then 展开规则 else error "指标规则未匹配或合并增加行数",
+				    调整列顺序 = Table.ReorderColumns(检查规则匹配, {"指标编号", "指标", "指标归类", "级别", "考核周期", "数据源", "数值类型", "目标类型", "达标方向"}),
+				    按编号排序 = Table.Sort(调整列顺序, {{"指标编号", Order.Ascending}})
+				in
+				    按编号排序
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,55 @@
+/// 只安排明细矩阵和趋势图列顺序，不建立关系。Total 单独读取年度源记录，不把月度利润、进价或百分比相加。
+table 参数_明细列
+	lineageTag: a8d15f8d-c4be-403f-ac7e-6540c14ad54e
+
+	column 列名
+		lineageTag: f8300209-561a-4c20-87b5-2d512dde9add
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [列名]
+		sortByColumn: 排序
+
+	column 排序
+		isHidden
+		lineageTag: 1f74c5ed-9cb4-4008-ad2a-954e0ff7c7c5
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [排序]
+
+	column 周期类型
+		isHidden
+		lineageTag: 467f23b2-1e25-4ac6-9038-5cff9a4b65be
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [周期类型]
+
+	column 序号
+		isHidden
+		lineageTag: f97e8841-d445-4c6a-b7a1-672fc00302f3
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [序号]
+
+	partition 参数_明细列 = calculated
+		mode: import
+		source =
+				DATATABLE ( "列名", STRING, "排序", INTEGER, "周期类型", STRING, "序号", INTEGER, {
+				    { "Jan", 1, "月度", 1 },
+				    { "Feb", 2, "月度", 2 },
+				    { "Mar", 3, "月度", 3 },
+				    { "Apr", 4, "月度", 4 },
+				    { "May", 5, "月度", 5 },
+				    { "Jun", 6, "月度", 6 },
+				    { "Jul", 7, "月度", 7 },
+				    { "Aug", 8, "月度", 8 },
+				    { "Sep", 9, "月度", 9 },
+				    { "Oct", 10, "月度", 10 },
+				    { "Nov", 11, "月度", 11 },
+				    { "Dec", 12, "月度", 12 },
+				    { "Q1", 1, "季度", 1 },
+				    { "Q2", 2, "季度", 2 },
+				    { "Q3", 3, "季度", 3 },
+				    { "Q4", 4, "季度", 4 },
+				    { "Total", 13, "年度", 1 }
+				} )
+

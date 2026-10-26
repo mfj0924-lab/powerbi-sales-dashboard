@@ -1,0 +1,132 @@
+/// 清洗阶段的独立预期结果与实际查询对照，不参与正式业务模型；基准源SHA256:72ee2f3573f57f23c2b2cc9b8cc346e8362196de35abb43ec1b291f3d15fb7e0
+table 验收_关键数值
+	lineageTag: 57bea637-f794-4399-8774-537631f8a17e
+
+	column 指标
+		dataType: string
+		isNullable: false
+		lineageTag: 5f542508-237e-476f-b661-f4ec0768de78
+		summarizeBy: none
+		sourceColumn: 指标
+
+	column 考核对象
+		dataType: string
+		isNullable: false
+		lineageTag: 91b1992f-fb79-4f77-a001-ffecd32693dc
+		summarizeBy: none
+		sourceColumn: 考核对象
+
+	column 期间
+		dataType: string
+		isNullable: false
+		lineageTag: e072c45f-92be-4b81-b55a-1467b4952b81
+		summarizeBy: none
+		sourceColumn: 期间
+
+	column 目标及实际
+		dataType: string
+		isNullable: false
+		lineageTag: f8d1a569-f76f-4b24-8406-cc6569a6618b
+		summarizeBy: none
+		sourceColumn: 目标及实际
+
+	column 源Excel原值
+		dataType: string
+		isNullable: false
+		lineageTag: 8fa76e56-b3a6-4724-95d2-f6f8bfcc344e
+		summarizeBy: none
+		sourceColumn: 源Excel原值
+
+	column 预期值
+		dataType: string
+		isNullable: false
+		lineageTag: a29da650-e938-482d-b3d9-0bdc211e7966
+		summarizeBy: none
+		sourceColumn: 预期值
+
+	column 清洗值
+		dataType: string
+		isNullable: false
+		lineageTag: 5dea6bea-f534-4694-b3ac-8af2eb862a0e
+		summarizeBy: none
+		sourceColumn: 清洗值
+
+	column 检查结果
+		dataType: string
+		isNullable: false
+		lineageTag: 2969b231-f9a1-482a-9e27-262d8962f8ca
+		summarizeBy: none
+		sourceColumn: 检查结果
+
+	column 差异条数
+		dataType: int64
+		isNullable: false
+		lineageTag: 428673bd-8130-4841-b2e3-3e402174ee99
+		summarizeBy: none
+		sourceColumn: 差异条数
+
+	column 核对记录数
+		dataType: int64
+		isNullable: false
+		lineageTag: a0268000-7cb8-4be8-986f-c6b4d214f71c
+		summarizeBy: none
+		sourceColumn: 核对记录数
+
+	column 图表预期值
+		dataType: decimal
+		lineageTag: c3c7d8ce-f537-4dba-af88-ab94c1076cf1
+		summarizeBy: none
+		sourceColumn: 图表预期值
+
+	column 图表清洗值
+		dataType: decimal
+		lineageTag: c6f87aac-c723-4b27-8c35-05dea7a64867
+		summarizeBy: none
+		sourceColumn: 图表清洗值
+
+	column 源记录编号
+		dataType: int64
+		isNullable: false
+		lineageTag: a7f1421d-786c-49dc-891a-784b43c05efc
+		summarizeBy: none
+		sourceColumn: 源记录编号
+
+	column CategoryKey
+		dataType: string
+		isNullable: false
+		lineageTag: 6cca95d5-6dde-4fe8-b291-7f7ae21afa75
+		summarizeBy: none
+		sourceColumn: CategoryKey
+
+	partition 验收_关键数值 = m
+		mode: import
+		source =
+				let
+				    实际 = Table.AddColumn(fact_指标值, "实际存在", each 1, Int64.Type),
+				    预期原表 = Table.FromRecords(Json.Document(File.Contents(Text.TrimEnd(DataSourceDirPath, {"\", "/"}) & "\源数据预期结果.json"))),
+				    预期 = Table.TransformColumnTypes(预期原表, {{"日期", type date}, {"数据", Currency.Type}, {"原始数据", Currency.Type}}),
+				    合并 = Table.NestedJoin(实际, {"CategoryKey"}, 预期, {"CategoryKey"}, "预期记录", JoinKind.FullOuter),
+				    展开 = Table.ExpandTableColumn(合并, "预期记录", {"CategoryKey","指标","考核对象","周期类型","日期","目标及实际","数据","原始数据","源记录编号"}, {"预期键","预期指标","预期对象","预期周期","预期日期","预期目标","预期数据","预期原值","预期行号"}),
+				    添加检查 = Table.AddColumn(展开, "检查", each
+				        let
+				            实际存在 = [实际存在] <> null,
+				            预期存在 = [预期键] <> null,
+				            指标名 = if 实际存在 then [指标] else [预期指标],
+				            对象名 = if 实际存在 then [考核对象] else [预期对象],
+				            周期名 = if 实际存在 then [周期类型] else [预期周期],
+				            日期值 = if 实际存在 then [日期] else [预期日期],
+				            目标名 = if 实际存在 then [目标及实际] else [预期目标],
+				            期间名 = if 周期名 = "年度" then Text.From(Date.Year(日期值)) & "年（年度）" else if 周期名 = "季度" then Text.From(Date.Year(日期值)) & "年Q" & Text.From(Date.QuarterOfYear(日期值)) & "（季度）" else Date.ToText(日期值,"yyyy-MM") & "（月度）",
+				            百分比 = List.Contains({"净利润率","成品按时销售率","成交率","退货率"}, 指标名),
+				            格式 = (值 as any) as text => if 值 = null then "未录入" else if 百分比 then Number.ToText(值*100,"0.##","en-US") & "%" else Number.ToText(值,"#,##0.####","en-US"),
+				            数值一致 = 实际存在 and 预期存在 and [数据] = [预期数据] and [源记录编号] = [预期行号],
+				            状态 = if not 实际存在 then "缺少记录" else if not 预期存在 then "多出记录" else if not 数值一致 then "存在差异" else if [预期数据] <> [预期原值] then "一致（已按规则修正）" else if [数据] = null then "一致（源数据为空）" else "一致"
+				        in [指标=指标名,考核对象=对象名,期间=期间名,目标及实际=目标名,源Excel原值=格式([预期原值]),预期值=格式([预期数据]),清洗值=格式([数据]),检查结果=状态,差异条数=if 数值一致 then 0 else 1,核对记录数=1,图表预期值=if 百分比 and [预期数据]<>null then [预期数据]*100 else [预期数据],图表清洗值=if 百分比 and [数据]<>null then [数据]*100 else [数据],源记录编号=if 实际存在 then [源记录编号] else [预期行号],CategoryKey=if 实际存在 then [CategoryKey] else [预期键]]),
+				    仅检查结果 = Table.SelectColumns(添加检查, {"检查"}),
+				    输出 = Table.ExpandRecordColumn(仅检查结果, "检查", {"指标","考核对象","期间","目标及实际","源Excel原值","预期值","清洗值","检查结果","差异条数","核对记录数","图表预期值","图表清洗值","源记录编号","CategoryKey"}),
+				    类型 = Table.TransformColumnTypes(输出, {{"指标",type text},{"考核对象",type text},{"期间",type text},{"目标及实际",type text},{"源Excel原值",type text},{"预期值",type text},{"清洗值",type text},{"检查结果",type text},{"差异条数",Int64.Type},{"核对记录数",Int64.Type},{"图表预期值",Currency.Type},{"图表清洗值",Currency.Type},{"源记录编号",Int64.Type},{"CategoryKey",type text}})
+				in
+				    类型
+
+	annotation PBI_ResultType = Table
+

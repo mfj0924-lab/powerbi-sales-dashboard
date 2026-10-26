@@ -1,0 +1,16 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "73d3db6a4e665a26a9b4",
+  "position": {
+    "x": 540.09871086556166,
+    "y": 300.22246777163906,
+    "z": 56000,
+    "height": 159.91749539594844,
+    "width": 408.84567219152854
+  },
+  "visualGroup": {
+    "displayName": "成交率其他部门",
+    "groupMode": "ScaleMode"
+  },
+  "isHidden": true
+}

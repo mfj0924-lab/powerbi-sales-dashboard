@@ -1,0 +1,291 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "fd3198c9d4355a039410",
+  "position": {
+    "x": 1112,
+    "y": 440,
+    "z": 1000,
+    "height": 416,
+    "width": 776,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "验收_关键数值"
+                    }
+                  },
+                  "Property": "目标及实际"
+                }
+              },
+              "queryRef": "验收_关键数值.目标及实际",
+              "nativeQueryRef": "目标及实际"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "验收_关键数值"
+                    }
+                  },
+                  "Property": "源Excel原值"
+                }
+              },
+              "queryRef": "验收_关键数值.源Excel原值",
+              "nativeQueryRef": "源Excel原值"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "验收_关键数值"
+                    }
+                  },
+                  "Property": "预期值"
+                }
+              },
+              "queryRef": "验收_关键数值.预期值",
+              "nativeQueryRef": "预期值"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "验收_关键数值"
+                    }
+                  },
+                  "Property": "清洗值"
+                }
+              },
+              "queryRef": "验收_关键数值.清洗值",
+              "nativeQueryRef": "清洗值"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "验收_关键数值"
+                    }
+                  },
+                  "Property": "检查结果"
+                }
+              },
+              "queryRef": "验收_关键数值.检查结果",
+              "nativeQueryRef": "检查结果"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "grid": [
+        {
+          "properties": {
+            "textSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "14D"
+                }
+              }
+            },
+            "rowPadding": {
+              "expr": {
+                "Literal": {
+                  "Value": "12D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "padding": [
+        {
+          "properties": {
+            "top": {
+              "expr": {
+                "Literal": {
+                  "Value": "8D"
+                }
+              }
+            },
+            "bottom": {
+              "expr": {
+                "Literal": {
+                  "Value": "8D"
+                }
+              }
+            },
+            "left": {
+              "expr": {
+                "Literal": {
+                  "Value": "8D"
+                }
+              }
+            },
+            "right": {
+              "expr": {
+                "Literal": {
+                  "Value": "8D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "visualHeader": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'精确数值与检查结论'"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "16D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "3dac1a0dc1bfb645cae3",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "验收_关键数值"
+              }
+            },
+            "Property": "目标及实际"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "c234dc19cc00eb695c00",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "验收_关键数值"
+              }
+            },
+            "Property": "源Excel原值"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "ae02291ed9083f37c944",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "验收_关键数值"
+              }
+            },
+            "Property": "预期值"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "3fff9148d62e23fc0a9c",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "验收_关键数值"
+              }
+            },
+            "Property": "清洗值"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "a22b5a65411106873293",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "验收_关键数值"
+              }
+            },
+            "Property": "检查结果"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
+  }
+}

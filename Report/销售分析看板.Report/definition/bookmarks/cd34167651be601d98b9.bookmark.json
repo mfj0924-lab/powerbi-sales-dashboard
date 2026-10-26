@@ -1,0 +1,99 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/bookmark/2.1.0/schema.json",
+  "displayName": "关闭月度其他成交率部门",
+  "name": "cd34167651be601d98b9",
+  "options": {
+    "targetVisualNames": [
+      "f73d7bb1cf63c0dd324b",
+      "d0744ade2f4a3031f609",
+      "d562c9fa3555a281b534",
+      "1df0a04274ec7dfb2618",
+      "1731423289daf432b4b3",
+      "29aef7c2dadebeb3c473",
+      "a023906e24af3cabaad8",
+      "bf09152a11635077a7d6",
+      "63e821ee8d5bf8993348",
+      "c744fd7e306cc3039c0d"
+    ],
+    "suppressActiveSection": true,
+    "suppressData": true
+  },
+  "explorationState": {
+    "version": "1.0",
+    "activeSection": "5d9f6a52feb15b839ac5",
+    "sections": {
+      "5d9f6a52feb15b839ac5": {
+        "visualContainers": {
+          "f73d7bb1cf63c0dd324b": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "d0744ade2f4a3031f609": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "d562c9fa3555a281b534": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "1df0a04274ec7dfb2618": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "1731423289daf432b4b3": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "29aef7c2dadebeb3c473": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "a023906e24af3cabaad8": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "63e821ee8d5bf8993348": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          },
+          "c744fd7e306cc3039c0d": {
+            "singleVisual": {
+              "display": {
+                "mode": "hidden"
+              }
+            }
+          }
+        },
+        "visualContainerGroups": {
+          "bf09152a11635077a7d6": {
+            "isHidden": true
+          }
+        }
+      }
+    }
+  }
+}

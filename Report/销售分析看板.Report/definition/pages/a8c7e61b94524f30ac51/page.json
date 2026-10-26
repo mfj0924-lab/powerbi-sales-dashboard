@@ -1,0 +1,41 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "a8c7e61b94524f30ac51",
+  "displayName": "关键数值检查",
+  "displayOption": "FitToPage",
+  "height": 1080,
+  "width": 1920,
+  "visibility": "HiddenInViewMode",
+  "visualInteractions": [
+    {
+      "source": "da51952605bb5ebf939c",
+      "target": "94b5081f52475cf3a271",
+      "type": "NoFilter"
+    },
+    {
+      "source": "da51952605bb5ebf939c",
+      "target": "961439f463735b2e88aa",
+      "type": "NoFilter"
+    },
+    {
+      "source": "94b5081f52475cf3a271",
+      "target": "da51952605bb5ebf939c",
+      "type": "NoFilter"
+    },
+    {
+      "source": "94b5081f52475cf3a271",
+      "target": "961439f463735b2e88aa",
+      "type": "NoFilter"
+    },
+    {
+      "source": "961439f463735b2e88aa",
+      "target": "da51952605bb5ebf939c",
+      "type": "NoFilter"
+    },
+    {
+      "source": "961439f463735b2e88aa",
+      "target": "94b5081f52475cf3a271",
+      "type": "NoFilter"
+    }
+  ]
+}

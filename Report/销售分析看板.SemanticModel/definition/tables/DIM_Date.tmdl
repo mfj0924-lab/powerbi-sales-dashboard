@@ -1,0 +1,115 @@
+/// 日期维度：覆盖事实表涉及的完整年份。按开发计划使用 CALENDAR。
+table DIM_Date
+	lineageTag: fd9cfe13-581e-4ebb-a32b-ae4fd33484de
+	dataCategory: Time
+
+	column 日期
+		isUnique
+		formatString: yyyy-MM-dd
+		lineageTag: 06ed9846-ec4f-4ad8-9065-b1a01be36767
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [日期]
+
+	column 年份
+		formatString: 0
+		lineageTag: 7a5b88ef-c942-43d5-825c-eff7613780fa
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [年份]
+
+	column 季度
+		lineageTag: 45c862e9-28ae-4440-94ba-ca8cb394d70d
+		isNameInferred
+		sourceColumn: [季度]
+		sortByColumn: 季度序号
+
+	column 季度序号
+		isHidden
+		formatString: 0
+		lineageTag: a98c4a7a-00d1-4158-93ec-3e50269b585f
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [季度序号]
+
+	column 月份
+		formatString: 0
+		lineageTag: b6acdfca-1e95-4678-bc55-02fbf32ea8b4
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [月份]
+
+	column 月份名称
+		lineageTag: 69daf68d-cf7a-478b-8cd2-f47f1cba64ff
+		isNameInferred
+		sourceColumn: [月份名称]
+		sortByColumn: 月份
+
+	column 年月
+		lineageTag: 4eb7e15c-53c0-4575-b1dc-378d46a2b2a1
+		isNameInferred
+		sourceColumn: [年月]
+		sortByColumn: 年月排序
+
+	column 年月排序
+		isHidden
+		formatString: 0
+		lineageTag: da71e7cd-ed74-4a9a-9648-73fd6a087152
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [年月排序]
+
+	column 年季度
+		lineageTag: ffcbb936-7cdd-43f4-b882-202e02cefb91
+		isNameInferred
+		sourceColumn: [年季度]
+		sortByColumn: 年季度排序
+
+	column 年季度排序
+		isHidden
+		formatString: 0
+		lineageTag: 6836eaf2-77e8-4b48-8b1d-97be910b9f9a
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [年季度排序]
+
+	/// 从年、季度、月逐级查看，日期连续，不包含混合周期加总。
+	hierarchy 日期层次结构
+		lineageTag: e94cab4d-4b6d-427f-9dc6-8a2d1dd31e94
+
+		level 年份
+			lineageTag: e6dde7c1-b812-4f57-b4a7-8528d14daeee
+			column: 年份
+
+		level 季度
+			lineageTag: febea8d1-ea99-40e0-b3e6-e46aa26c9226
+			column: 季度
+
+		level 月份
+			lineageTag: cdb22547-2c90-458d-9ded-75c7921b67f4
+			column: 月份名称
+
+		level 日期
+			lineageTag: 05a319e1-9ad4-4206-82a1-a14c27adadca
+			column: 日期
+
+	partition DIM_Date = calculated
+		mode: import
+		source =
+				VAR FirstYear = MINX ( ALL ( 'fact_指标值' ), 'fact_指标值'[年份] )
+				VAR LastYear = MAXX ( ALL ( 'fact_指标值' ), 'fact_指标值'[年份] )
+				RETURN
+				    SELECTCOLUMNS (
+				        CALENDAR ( DATE ( FirstYear, 1, 1 ), DATE ( LastYear, 12, 31 ) ),
+				        "日期", [Date],
+				        "年份", YEAR ( [Date] ),
+				        "季度", "Q" & QUARTER ( [Date] ),
+				        "季度序号", QUARTER ( [Date] ),
+				        "月份", MONTH ( [Date] ),
+				        "月份名称", FORMAT ( [Date], "m月" ),
+				        "年月", FORMAT ( [Date], "yyyy-MM" ),
+				        "年月排序", YEAR ( [Date] ) * 100 + MONTH ( [Date] ),
+				        "年季度", FORMAT ( [Date], "yyyy" ) & "-Q" & QUARTER ( [Date] ),
+				        "年季度排序", YEAR ( [Date] ) * 10 + QUARTER ( [Date] )
+				    )
+

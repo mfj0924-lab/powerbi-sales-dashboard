@@ -1,0 +1,43 @@
+/// 每行一个考核对象。用户确认QUA对应质量部。
+table dim_考核对象
+	lineageTag: 950cff8d-262b-48a6-a465-0c96523250cf
+
+	/// 考核对象维度的一端唯一编号，用于连接事实表。
+	column 考核对象编号
+		dataType: int64
+		isHidden
+		isKey
+		lineageTag: 792c1ce9-01b3-4584-b710-bee3202095f1
+		summarizeBy: none
+		sourceColumn: 考核对象编号
+
+	column 考核对象
+		dataType: string
+		lineageTag: 4461b980-9041-42f6-93ff-48d85b8da9b6
+		summarizeBy: none
+		sourceColumn: 考核对象
+
+	column 显示简称
+		dataType: string
+		lineageTag: 1eb95c26-fc8b-4e8e-8fb4-0595fe7e5fa5
+		summarizeBy: none
+		sourceColumn: 显示简称
+
+	partition dim_考核对象 = m
+		mode: import
+		queryGroup: dim
+		source =
+				let
+				    源 = 整理_销售分析,
+				    选择考核对象 = Table.SelectColumns(源, {"考核对象"}),
+				    删除重复对象 = Table.Distinct(选择考核对象),
+				    对象顺序 = {"全员", "工厂", "生产制造部", "质量部", "采购部", "维修部"},
+				    添加对象编号 = Table.AddColumn(删除重复对象, "考核对象编号", each let 位置 = List.PositionOf(对象顺序, [考核对象]) in if 位置 >= 0 then 位置 + 1 else error "发现未定义的考核对象，需要维护对象列表", Int64.Type),
+				    添加显示简称 = Table.AddColumn(添加对象编号, "显示简称", each [考核对象], type text),
+				    调整列顺序 = Table.ReorderColumns(添加显示简称, {"考核对象编号", "考核对象", "显示简称"}),
+				    按编号排序 = Table.Sort(调整列顺序, {{"考核对象编号", Order.Ascending}})
+				in
+				    按编号排序
+
+	annotation PBI_ResultType = Table
+

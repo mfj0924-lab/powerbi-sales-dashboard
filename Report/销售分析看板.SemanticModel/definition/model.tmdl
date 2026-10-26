@@ -1,0 +1,47 @@
+model Model
+	culture: zh-CN
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: zh-CN
+	valueFilterBehavior: independent
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+/// 路径参数与源Excel查询
+queryGroup source
+
+	annotation PBI_QueryGroupOrder = 0
+
+/// 时间与部门清洗、重复检查
+queryGroup staging
+
+	annotation PBI_QueryGroupOrder = 1
+
+/// 指标和考核对象维度查询
+queryGroup dim
+
+	annotation PBI_QueryGroupOrder = 2
+
+/// 用于后续计算的事实表
+queryGroup fact
+
+	annotation PBI_QueryGroupOrder = 3
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_ProTooling = ["MCP-PBIModeling","DevMode"]
+
+annotation PBI_QueryOrder = ["dim_指标","dim_考核对象","fact_指标值","源_销售分析","整理_销售分析","检查_重复记录","分析月份","DataSourceDirPath","验收_关键数值"]
+
+ref table dim_指标
+ref table dim_考核对象
+ref table fact_指标值
+ref table 验收_关键数值
+ref table DIM_Date
+ref table 参数_分析设置
+ref table 参数_分析周期
+ref table 参数_明细列
+ref table 参数_明细行
+
+ref cultureInfo zh-CN
+

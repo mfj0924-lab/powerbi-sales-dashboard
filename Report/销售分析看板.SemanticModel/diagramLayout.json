@@ -1,0 +1,139 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 11.333333015441895,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 0,
+            "y": 39
+          },
+          "nodeIndex": "dim_考核对象",
+          "nodeLineageTag": "950cff8d-262b-48a6-a465-0c96523250cf",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 286,
+            "y": 330
+          },
+          "nodeIndex": "dim_指标",
+          "nodeLineageTag": "691b7b30-f9a5-400e-8ff0-ee5f28a2d0d8",
+          "size": {
+            "height": 296,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 568,
+            "y": 0
+          },
+          "nodeIndex": "fact_指标值",
+          "nodeLineageTag": "73c4b948-2218-4ce2-bbb4-d47feb37e8c5",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 852,
+            "y": 0
+          },
+          "nodeIndex": "验收_关键数值",
+          "nodeLineageTag": "57bea637-f794-4399-8774-537631f8a17e",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1136,
+            "y": 50
+          },
+          "nodeIndex": "参数_分析设置",
+          "nodeLineageTag": "d6054170-1a00-4b63-b2f8-2927fcad2223",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1420,
+            "y": 86
+          },
+          "nodeIndex": "参数_分析周期",
+          "nodeLineageTag": "8d874e6c-1773-440f-83b8-e146b5db1099",
+          "size": {
+            "height": 128,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1704,
+            "y": 0
+          },
+          "nodeIndex": "DIM_Date",
+          "nodeLineageTag": "fd9cfe13-581e-4ebb-a32b-ae4fd33484de",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1988,
+            "y": 225
+          },
+          "nodeIndex": "参数_明细列",
+          "nodeLineageTag": "a8d15f8d-c4be-403f-ac7e-6540c14ad54e",
+          "size": {
+            "height": 176,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 2272,
+            "y": 237
+          },
+          "nodeIndex": "参数_明细行",
+          "nodeLineageTag": "fa130667-6a55-4e90-bf78-b2725316cb85",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 0
+        }
+      ],
+      "name": "所有表",
+      "zoomValue": 100,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "所有表",
+  "defaultDiagram": "所有表"
+}
